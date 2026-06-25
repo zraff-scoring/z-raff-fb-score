@@ -1,0 +1,6 @@
+{
+  "name": "Z-raff Sports Graphics Pro",
+  "description": "Professional football broadcast graphics engine and real-time operator control panel, optimized for OBS Studio Browser Sources.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
