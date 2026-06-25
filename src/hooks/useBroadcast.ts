@@ -251,6 +251,8 @@ export function useBroadcast() {
       const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
       if (!active) return;
 
+      let fetchedFromFirestore = false;
+
       if (!isFirebaseMock && firestoreDb) {
         try {
           const docSnap = await getDoc(doc(firestoreDb, 'broadcast_states', syncKey));
@@ -260,13 +262,16 @@ export function useBroadcast() {
               const parsedState = JSON.parse(data.stateJson);
               if (parsedState && parsedState.settings) {
                 setAndPersistState(parsedState);
+                fetchedFromFirestore = true;
               }
             }
           }
         } catch (err) {
-          console.error('Failed to fetch initial state from Firestore:', err);
+          console.error('Failed to fetch initial state from Firestore (falling back to ntfy):', err);
         }
-      } else {
+      }
+
+      if (!fetchedFromFirestore) {
         try {
           const res = await fetch(`https://ntfy.sh/${syncKey}/json?poll=1`);
           if (!res.ok) return;
@@ -290,7 +295,7 @@ export function useBroadcast() {
             setAndPersistState(latestState);
           }
         } catch (err) {
-          console.error('Failed to fetch initial cloud sync state from ntfy:', err);
+          console.error('Failed to fetch initial cloud sync state from ntfy fallback:', err);
         }
       }
     };
@@ -417,6 +422,7 @@ export function useBroadcast() {
     if (!syncKey) return;
 
     const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
+    let publishedToFirestore = false;
 
     if (!isFirebaseMock && firestoreDb) {
       try {
@@ -426,11 +432,14 @@ export function useBroadcast() {
             updatedAt: new Date().toISOString(),
             stateJson: JSON.stringify(payload.state)
           });
+          publishedToFirestore = true;
         }
       } catch (err) {
-        console.error('Firestore failed to save state:', err);
+        console.error('Firestore failed to save state, trying ntfy fallback:', err);
       }
-    } else {
+    }
+
+    if (!publishedToFirestore) {
       payload.sender = clientId.current;
 
       fetch(`https://ntfy.sh/${syncKey}`, {
@@ -440,7 +449,7 @@ export function useBroadcast() {
         },
         body: JSON.stringify(payload),
       }).catch((err) => {
-        console.error('Cloud Sync failed to publish:', err);
+        console.error('Cloud Sync failed to publish to ntfy:', err);
       });
     }
   }, [syncKey]);
@@ -507,6 +516,51 @@ export function useBroadcast() {
       const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
       if (!active) return;
 
+      const connectSse = () => {
+        try {
+          if (sse) sse.close();
+          sse = new EventSource(`https://ntfy.sh/${syncKey}/sse`);
+
+          sse.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (data.event === 'message' && data.message) {
+                const payload = JSON.parse(data.message);
+                
+                // Skip if sent by our own client instance
+                if (payload.sender === clientId.current) {
+                  return;
+                }
+
+                if (payload.type === 'STATE_UPDATE' && payload.state) {
+                  if (payload.state.settings) {
+                    setAndPersistState(payload.state);
+                    if (!payload.state.activeReplay) {
+                      const endReplayEvent = new CustomEvent('broadcast-replay-end');
+                      window.dispatchEvent(endReplayEvent);
+                    }
+                  }
+                } else if (payload.type === 'TRIGGER_REPLAY') {
+                  const replayEvent = new CustomEvent('broadcast-replay');
+                  window.dispatchEvent(replayEvent);
+                }
+              }
+            } catch (err) {
+              // Ignore parse errors
+            }
+          };
+
+          sse.onerror = () => {
+            if (sse) sse.close();
+            reconnectTimeout = window.setTimeout(() => {
+              if (active) connectSse();
+            }, 3000);
+          };
+        } catch (e) {
+          console.error('Failed to establish Cloud Sync EventSource:', e);
+        }
+      };
+
       if (!isFirebaseMock && firestoreDb) {
         console.log('Establishing Firestore real-time listener for syncKey:', syncKey);
         try {
@@ -530,57 +584,19 @@ export function useBroadcast() {
               }
             }
           }, (err) => {
-            console.error('Firestore real-time subscription error:', err);
+            console.error('Firestore real-time subscription error (falling back to ntfy SSE):', err);
+            if (active) {
+              connectSse();
+            }
           });
         } catch (err) {
-          console.error('Failed to setup Firestore listener:', err);
+          console.error('Failed to setup Firestore listener (falling back to ntfy SSE):', err);
+          if (active) {
+            connectSse();
+          }
         }
       } else {
         console.log('Establishing SSE ntfy.sh fallback listener for syncKey:', syncKey);
-        const connectSse = () => {
-          try {
-            sse = new EventSource(`https://ntfy.sh/${syncKey}/sse`);
-
-            sse.onmessage = (event) => {
-              try {
-                const data = JSON.parse(event.data);
-                if (data.event === 'message' && data.message) {
-                  const payload = JSON.parse(data.message);
-                  
-                  // Skip if sent by our own client instance
-                  if (payload.sender === clientId.current) {
-                    return;
-                  }
-
-                  if (payload.type === 'STATE_UPDATE' && payload.state) {
-                    if (payload.state.settings) {
-                      setAndPersistState(payload.state);
-                      if (!payload.state.activeReplay) {
-                        const endReplayEvent = new CustomEvent('broadcast-replay-end');
-                        window.dispatchEvent(endReplayEvent);
-                      }
-                    }
-                  } else if (payload.type === 'TRIGGER_REPLAY') {
-                    const replayEvent = new CustomEvent('broadcast-replay');
-                    window.dispatchEvent(replayEvent);
-                  }
-                }
-              } catch (err) {
-                // Ignore parse errors
-              }
-            };
-
-            sse.onerror = () => {
-              if (sse) sse.close();
-              reconnectTimeout = window.setTimeout(() => {
-                if (active) connectSse();
-              }, 3000);
-            };
-          } catch (e) {
-            console.error('Failed to establish Cloud Sync EventSource:', e);
-          }
-        };
-
         connectSse();
       }
     };
