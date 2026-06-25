@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Activity, Settings, EyeOff, Layout, Cast, HelpCircle, Trophy, Users, Copy, ExternalLink, Tv 
 } from 'lucide-react';
-import { useBroadcast } from '../hooks/useBroadcast.js';
+import { useBroadcast, DEFAULT_STATE } from '../hooks/useBroadcast.js';
 
 // Import our modular category components
 import MatchCategory from './MatchCategory.js';
@@ -34,13 +34,16 @@ export default function ControlPanel() {
   const handleFullReset = async () => {
     try {
       const res = await fetch('/api/reset', { method: 'POST' });
-      const data = await res.json();
-      if (data.success && data.state) {
+      const data = res.ok ? await res.json() : null;
+      if (data && data.success && data.state) {
         // Instantly sync the state in client
         updateState(data.state);
+      } else {
+        updateState(DEFAULT_STATE);
       }
     } catch (err) {
-      console.error('Failed to perform server match reset:', err);
+      console.error('Failed to perform server match reset, using client-side fallback:', err);
+      updateState(DEFAULT_STATE);
     }
   };
 
