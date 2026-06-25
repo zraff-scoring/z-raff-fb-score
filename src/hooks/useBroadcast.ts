@@ -147,6 +147,54 @@ export function useBroadcast() {
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
 
+  // Client ID to prevent self-update loops
+  const clientId = useRef<string>(Math.random().toString(36).substring(2, 10));
+
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('cloud_sync_enabled');
+      if (saved) {
+        return saved === 'true';
+      }
+      // Auto-enable if hosted on pages.dev, vercel.app, or cloudflare
+      if (typeof window !== 'undefined') {
+        const host = window.location.hostname;
+        if (host.includes('pages.dev') || host.includes('vercel.app') || host.includes('cloudflare')) {
+          return true;
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return false;
+  });
+
+  const [syncKey, setSyncKey] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSyncKey = urlParams.get('syncKey');
+      if (urlSyncKey) {
+        return urlSyncKey;
+      }
+      try {
+        const savedKey = localStorage.getItem('cloud_sync_key');
+        if (savedKey) {
+          return savedKey;
+        }
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        let newKey = 'zraff-sync-';
+        for (let i = 0; i < 8; i++) {
+          newKey += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        localStorage.setItem('cloud_sync_key', newKey);
+        return newKey;
+      } catch (e) {
+        // Ignore
+      }
+    }
+    return '';
+  });
+
   // Sync state helper to both local state & local storage safely
   const setAndPersistState = useCallback((next: BroadcastState) => {
     setState(next);
@@ -323,6 +371,89 @@ export function useBroadcast() {
     return () => clearInterval(t);
   }, [isConnected, state.timer.isRunning]);
 
+  // Helper to publish updates to ntfy.sh Cloud Sync topic
+  const publishToCloud = useCallback((payload: any) => {
+    if (!syncKey) return;
+    payload.sender = clientId.current;
+
+    fetch(`https://ntfy.sh/${syncKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+      body: JSON.stringify(payload),
+    }).catch((err) => {
+      console.error('Cloud Sync failed to publish:', err);
+    });
+  }, [syncKey]);
+
+  // Subscribe to Cloud Sync stream via Server-Sent Events (SSE)
+  useEffect(() => {
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const hasUrlSyncKey = urlParams?.has('syncKey');
+    const shouldSubscribe = syncKey && (hasUrlSyncKey || cloudSyncEnabled);
+
+    if (!shouldSubscribe) return;
+
+    let sse: EventSource | null = null;
+    let reconnectTimeout: number | null = null;
+
+    const connectSse = () => {
+      try {
+        sse = new EventSource(`https://ntfy.sh/${syncKey}/sse`);
+
+        sse.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.event === 'message' && data.message) {
+              const payload = JSON.parse(data.message);
+              
+              // Skip if sent by our own client instance
+              if (payload.sender === clientId.current) {
+                return;
+              }
+
+              if (payload.type === 'STATE_UPDATE' && payload.state) {
+                if (payload.state.settings) {
+                  setAndPersistState(payload.state);
+                  if (!payload.state.activeReplay) {
+                    const endReplayEvent = new CustomEvent('broadcast-replay-end');
+                    window.dispatchEvent(endReplayEvent);
+                  }
+                }
+              } else if (payload.type === 'TRIGGER_REPLAY') {
+                const replayEvent = new CustomEvent('broadcast-replay');
+                window.dispatchEvent(replayEvent);
+              }
+            }
+          } catch (err) {
+            // Ignore parse errors
+          }
+        };
+
+        sse.onerror = () => {
+          if (sse) sse.close();
+          reconnectTimeout = window.setTimeout(() => {
+            connectSse();
+          }, 3000);
+        };
+      } catch (e) {
+        console.error('Failed to establish Cloud Sync EventSource:', e);
+      }
+    };
+
+    connectSse();
+
+    return () => {
+      if (sse) {
+        sse.close();
+      }
+      if (reconnectTimeout) {
+        window.clearTimeout(reconnectTimeout);
+      }
+    };
+  }, [syncKey, cloudSyncEnabled, setAndPersistState]);
+
   const updateState = useCallback((updater: BroadcastState | ((prev: BroadcastState) => BroadcastState)) => {
     setState((prev) => {
       const nextState = typeof updater === 'function' ? updater(prev) : updater;
@@ -360,9 +491,17 @@ export function useBroadcast() {
         });
       }
 
+      // 4. Sync via Cloud Sync if enabled
+      if (cloudSyncEnabled) {
+        publishToCloud({
+          type: 'STATE_UPDATE',
+          state: nextState,
+        });
+      }
+
       return nextState;
     });
-  }, []);
+  }, [cloudSyncEnabled, publishToCloud]);
 
   const triggerReplay = useCallback(() => {
     // 1. Send over BroadcastChannel instantly
@@ -382,7 +521,12 @@ export function useBroadcast() {
     } else {
       fetch('/api/replay', { method: 'POST' }).catch(() => {});
     }
-  }, []);
+
+    // 4. Sync via Cloud Sync if enabled
+    if (cloudSyncEnabled) {
+      publishToCloud({ type: 'TRIGGER_REPLAY' });
+    }
+  }, [cloudSyncEnabled, publishToCloud]);
 
   const clearOverlays = useCallback(() => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -426,5 +570,19 @@ export function useBroadcast() {
     triggerReplay,
     clearOverlays,
     isConnected,
+    cloudSyncEnabled,
+    setCloudSyncEnabled: (enabled: boolean) => {
+      setCloudSyncEnabled(enabled);
+      try {
+        localStorage.setItem('cloud_sync_enabled', String(enabled));
+      } catch (e) {}
+    },
+    syncKey,
+    setSyncKey: (key: string) => {
+      setSyncKey(key);
+      try {
+        localStorage.setItem('cloud_sync_key', key);
+      } catch (e) {}
+    },
   };
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
-  Activity, Settings, EyeOff, Layout, Cast, HelpCircle, Trophy, Users, Copy, ExternalLink, Tv 
+  Activity, Settings, EyeOff, Layout, Cast, HelpCircle, Trophy, Users, Copy, ExternalLink, Tv,
+  Cloud, CloudOff, RefreshCw
 } from 'lucide-react';
 import { useBroadcast, DEFAULT_STATE } from '../hooks/useBroadcast.js';
 
@@ -14,13 +15,29 @@ import OverlaysCategory from './OverlaysCategory.js';
 type CategoryType = 'match' | 'scoreboard' | 'timer' | 'lineups' | 'overlays';
 
 export default function ControlPanel() {
-  const { state, updateState, triggerReplay, clearOverlays, isConnected } = useBroadcast();
+  const { 
+    state, 
+    updateState, 
+    triggerReplay, 
+    clearOverlays, 
+    isConnected,
+    cloudSyncEnabled,
+    setCloudSyncEnabled,
+    syncKey,
+    setSyncKey
+  } = useBroadcast();
   const [activeCategory, setActiveCategory] = useState<CategoryType>('match');
   const [copied, setCopied] = useState(false);
 
+  const getOverlayUrl = () => {
+    if (typeof window === 'undefined') return '/output';
+    return cloudSyncEnabled && syncKey
+      ? `${window.location.origin}/output?syncKey=${syncKey}`
+      : `${window.location.origin}/output`;
+  };
+
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/output`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(getOverlayUrl());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -112,46 +129,101 @@ export default function ControlPanel() {
       </header>
 
       {/* OBS BROWSER SOURCE UTILITY BAR */}
-      <div className="mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="p-2.5 bg-blue-600/10 text-blue-400 border border-blue-500/15 rounded-xl">
-            <Tv className="w-5 h-5 animate-pulse" />
+      <div className="mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 shadow-lg">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800/60 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-600/10 text-blue-400 border border-blue-500/15 rounded-xl">
+              <Tv className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black text-white uppercase tracking-wider">OBS Browser Source Overlay</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Configure and add this as a 1920x1080 Browser Source in OBS Studio to render live match graphics.</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xs font-black text-white uppercase tracking-wider">OBS Browser Source Overlay URL</h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">Add this URL as a 1920x1080 Browser Source in OBS Studio to render live match graphics.</p>
-          </div>
-        </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
-          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-mono text-[11px] text-slate-300 w-full md:w-80 select-all overflow-hidden truncate">
-            {typeof window !== 'undefined' ? `${window.location.origin}/output` : '/output'}
-          </div>
-          
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-stretch md:self-auto justify-end">
+            <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Cloud Sync:</span>
             <button
-              onClick={handleCopyLink}
-              className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer ${
-                copied 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-750'
+              onClick={() => setCloudSyncEnabled(!cloudSyncEnabled)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border cursor-pointer ${
+                cloudSyncEnabled
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-sm shadow-emerald-500/5'
+                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-300'
               }`}
             >
-              <Copy className="w-3.5 h-3.5" />
-              <span>{copied ? 'Copied!' : 'Copy'}</span>
+              {cloudSyncEnabled ? (
+                <>
+                  <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                  <span>Enabled (ntfy.sh)</span>
+                </>
+              ) : (
+                <>
+                  <CloudOff className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Disabled (Local WS)</span>
+                </>
+              )}
             </button>
-
-            <a
-              href="/output"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 sm:flex-none px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-lg shadow-blue-600/15"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Launch</span>
-            </a>
           </div>
         </div>
+
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+            <div className="flex items-center bg-slate-950 border border-slate-855 rounded-xl px-3 py-2.5 font-mono text-[11px] text-slate-300 w-full overflow-hidden select-all select-none relative group pr-10">
+              <span className="truncate block w-full">{getOverlayUrl()}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0">
+              <button
+                onClick={handleCopyLink}
+                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer ${
+                  copied 
+                    ? 'bg-emerald-600 text-white' 
+                    : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-750'
+                }`}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+              </button>
+
+              <a
+                href={getOverlayUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-lg shadow-blue-600/15"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open Overlay</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {cloudSyncEnabled && (
+          <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800/40 text-[10px] text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-amber-500 font-bold uppercase">⚡ Cloud Sync Active:</span>
+              <span>Your OBS source will receive score/timer updates in real-time across different browsers/computers!</span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0 bg-slate-900 border border-slate-850 py-1 px-2.5 rounded-lg">
+              <span className="text-[9px] text-slate-500 uppercase font-black">Sync Key:</span>
+              <span className="text-blue-400 font-bold select-all">{syncKey}</span>
+              <button
+                onClick={() => {
+                  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+                  let newKey = 'zraff-sync-';
+                  for (let i = 0; i < 8; i++) {
+                    newKey += chars.charAt(Math.floor(Math.random() * chars.length));
+                  }
+                  setSyncKey(newKey);
+                }}
+                className="ml-1 text-slate-500 hover:text-white p-0.5 rounded cursor-pointer"
+                title="Regenerate Sync Key"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ---------------------------------------------------- */}
