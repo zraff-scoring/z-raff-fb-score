@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for security architecture
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.matches('^[a-zA-Z0-9_\\-]+$') && id.size() > 0 && id.size() <= 64;
+    }
+
+    function isValidBroadcastState(data) {
+      return data.keys().hasAll(['syncKey', 'updatedAt', 'stateJson'])
+        && data.syncKey is string
+        && data.syncKey.size() > 0
+        && data.syncKey.size() <= 64
+        && data.stateJson is string
+        && data.stateJson.size() <= 200000
+        && (!data.keys().contains('ownerUid') || (data.ownerUid is string && data.ownerUid == request.auth.uid));
+    }
+
+    // Match broadcast states by unique syncKey
+    match /broadcast_states/{syncKey} {
+      // Anyone can read/subscribe to the sync state so that the OBS Browser Source overlays work instantly.
+      allow read: if isValidId(syncKey);
+      
+      // Creating, updating or deleting requires active operator authentication.
+      allow create: if isAuthenticated() && isValidId(syncKey) && isValidBroadcastState(request.resource.data);
+      allow update: if isAuthenticated() && isValidId(syncKey) && isValidBroadcastState(request.resource.data);
+      allow delete: if isAuthenticated() && isValidId(syncKey);
+    }
+  }
+}

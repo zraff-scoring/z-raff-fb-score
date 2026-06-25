@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { 
   Activity, Settings, EyeOff, Layout, Cast, HelpCircle, Trophy, Users, Copy, ExternalLink, Tv,
-  Cloud, CloudOff, RefreshCw
+  Cloud, CloudOff, RefreshCw, LogOut
 } from 'lucide-react';
 import { useBroadcast, DEFAULT_STATE } from '../hooks/useBroadcast.js';
+import { useAuth } from '../contexts/AuthContext.js';
 
 // Import our modular category components
 import MatchCategory from './MatchCategory.js';
@@ -15,6 +16,7 @@ import OverlaysCategory from './OverlaysCategory.js';
 type CategoryType = 'match' | 'scoreboard' | 'timer' | 'lineups' | 'overlays';
 
 export default function ControlPanel() {
+  const { user, logout } = useAuth();
   const { 
     state, 
     updateState, 
@@ -106,7 +108,35 @@ export default function ControlPanel() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-end">
+          {user && (
+            <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl">
+              {user.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  alt={user.displayName || 'Avatar'} 
+                  className="w-7 h-7 rounded-full border border-slate-700" 
+                  referrerPolicy="no-referrer" 
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                  {user.displayName?.[0]?.toUpperCase() || 'U'}
+                </div>
+              )}
+              <div className="text-left leading-none max-w-[120px]">
+                <p className="text-[10px] font-black text-white truncate">{user.displayName || 'Operator'}</p>
+                <p className="text-[8px] text-slate-400 font-mono mt-0.5 truncate">{user.email || 'operator@stream'}</p>
+              </div>
+              <button
+                onClick={logout}
+                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer border border-transparent hover:border-rose-500/10 ml-1"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Quick Info Modal/Trigger Button */}
           <div className="text-[10px] text-slate-500 hidden xl:flex items-center gap-1">
             <HelpCircle className="w-3.5 h-3.5" />

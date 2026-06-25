@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BroadcastState, Player } from '../types.js';
+import { initFirebase, doc, setDoc, onSnapshot, getDoc } from '../lib/firebase.js';
 
 // Default mock players matching the server setup
 const defaultHomeXI: Player[] = [
@@ -152,16 +153,25 @@ export function useBroadcast() {
 
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('syncKey')) {
+          return true;
+        }
+        const host = window.location.hostname;
+        if (
+          host !== 'localhost' && 
+          host !== '127.0.0.1' && 
+          host !== '' && 
+          !host.startsWith('192.168.') && 
+          !host.startsWith('10.')
+        ) {
+          return true;
+        }
+      }
       const saved = localStorage.getItem('cloud_sync_enabled');
       if (saved) {
         return saved === 'true';
-      }
-      // Auto-enable if hosted on pages.dev, vercel.app, or cloudflare
-      if (typeof window !== 'undefined') {
-        const host = window.location.hostname;
-        if (host.includes('pages.dev') || host.includes('vercel.app') || host.includes('cloudflare')) {
-          return true;
-        }
       }
     } catch (e) {
       // Ignore
@@ -225,6 +235,72 @@ export function useBroadcast() {
       active = false;
     };
   }, [setAndPersistState]);
+
+  // Fetch initial state from cloud sync source (Firestore or fallback ntfy.sh) on active load
+  useEffect(() => {
+    if (!syncKey) return;
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const hasUrlSyncKey = urlParams?.has('syncKey');
+    const shouldFetch = hasUrlSyncKey || cloudSyncEnabled;
+
+    if (!shouldFetch) return;
+
+    let active = true;
+
+    const fetchCloudHistory = async () => {
+      const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
+      if (!active) return;
+
+      if (!isFirebaseMock && firestoreDb) {
+        try {
+          const docSnap = await getDoc(doc(firestoreDb, 'broadcast_states', syncKey));
+          if (active && docSnap.exists()) {
+            const data = docSnap.data();
+            if (data && data.stateJson) {
+              const parsedState = JSON.parse(data.stateJson);
+              if (parsedState && parsedState.settings) {
+                setAndPersistState(parsedState);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch initial state from Firestore:', err);
+        }
+      } else {
+        try {
+          const res = await fetch(`https://ntfy.sh/${syncKey}/json?poll=1`);
+          if (!res.ok) return;
+          const text = await res.text();
+          const lines = text.split('\n').filter(Boolean);
+          let latestState = null;
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              if (data.event === 'message' && data.message) {
+                const payload = JSON.parse(data.message);
+                if (payload.type === 'STATE_UPDATE' && payload.state) {
+                  latestState = payload.state;
+                }
+              }
+            } catch (e) {
+              // Ignore parse errors for keepalive or other ntfy events
+            }
+          }
+          if (active && latestState && latestState.settings) {
+            setAndPersistState(latestState);
+          }
+        } catch (err) {
+          console.error('Failed to fetch initial cloud sync state from ntfy:', err);
+        }
+      }
+    };
+
+    fetchCloudHistory();
+
+    return () => {
+      active = false;
+    };
+  }, [syncKey, cloudSyncEnabled, setAndPersistState]);
 
   // Connect to live WebSocket if available
   const connect = useCallback(() => {
@@ -336,10 +412,45 @@ export function useBroadcast() {
     return () => clearInterval(interval);
   }, [isConnected, setAndPersistState]);
 
+  // Helper to publish updates to Firestore or fallback ntfy.sh Cloud Sync topic
+  const publishToCloud = useCallback(async (payload: any) => {
+    if (!syncKey) return;
+
+    const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
+
+    if (!isFirebaseMock && firestoreDb) {
+      try {
+        if (payload.type === 'STATE_UPDATE' && payload.state) {
+          await setDoc(doc(firestoreDb, 'broadcast_states', syncKey), {
+            syncKey,
+            updatedAt: new Date().toISOString(),
+            stateJson: JSON.stringify(payload.state)
+          });
+        }
+      } catch (err) {
+        console.error('Firestore failed to save state:', err);
+      }
+    } else {
+      payload.sender = clientId.current;
+
+      fetch(`https://ntfy.sh/${syncKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: JSON.stringify(payload),
+      }).catch((err) => {
+        console.error('Cloud Sync failed to publish:', err);
+      });
+    }
+  }, [syncKey]);
+
   // Local client-side timer tick backup (important for Vercel/serverless where server ticker is absent)
   useEffect(() => {
     if (isConnected) return; // If connected to active server, prioritize server authoritative clock
     if (!state.timer.isRunning) return;
+
+    const isController = typeof window !== 'undefined' && !window.location.pathname.includes('/output');
 
     const t = setInterval(() => {
       setState((prev) => {
@@ -364,30 +475,22 @@ export function useBroadcast() {
           channel.close();
         }
 
+        // If Cloud Sync is enabled, and we are the controller, publish a sync update every 5 seconds
+        if (cloudSyncEnabled && isController && nextSecs % 5 === 0) {
+          publishToCloud({
+            type: 'STATE_UPDATE',
+            state: updated,
+          });
+        }
+
         return updated;
       });
     }, 1000);
 
     return () => clearInterval(t);
-  }, [isConnected, state.timer.isRunning]);
+  }, [isConnected, state.timer.isRunning, cloudSyncEnabled, publishToCloud]);
 
-  // Helper to publish updates to ntfy.sh Cloud Sync topic
-  const publishToCloud = useCallback((payload: any) => {
-    if (!syncKey) return;
-    payload.sender = clientId.current;
-
-    fetch(`https://ntfy.sh/${syncKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-      body: JSON.stringify(payload),
-    }).catch((err) => {
-      console.error('Cloud Sync failed to publish:', err);
-    });
-  }, [syncKey]);
-
-  // Subscribe to Cloud Sync stream via Server-Sent Events (SSE)
+  // Subscribe to Cloud Sync stream (Firestore or fallback ntfy.sh SSE)
   useEffect(() => {
     const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const hasUrlSyncKey = urlParams?.has('syncKey');
@@ -395,56 +498,100 @@ export function useBroadcast() {
 
     if (!shouldSubscribe) return;
 
+    let unsubFirestore: (() => void) | null = null;
     let sse: EventSource | null = null;
     let reconnectTimeout: number | null = null;
+    let active = true;
 
-    const connectSse = () => {
-      try {
-        sse = new EventSource(`https://ntfy.sh/${syncKey}/sse`);
+    const startSubscription = async () => {
+      const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
+      if (!active) return;
 
-        sse.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.event === 'message' && data.message) {
-              const payload = JSON.parse(data.message);
-              
-              // Skip if sent by our own client instance
-              if (payload.sender === clientId.current) {
-                return;
-              }
-
-              if (payload.type === 'STATE_UPDATE' && payload.state) {
-                if (payload.state.settings) {
-                  setAndPersistState(payload.state);
-                  if (!payload.state.activeReplay) {
-                    const endReplayEvent = new CustomEvent('broadcast-replay-end');
-                    window.dispatchEvent(endReplayEvent);
+      if (!isFirebaseMock && firestoreDb) {
+        console.log('Establishing Firestore real-time listener for syncKey:', syncKey);
+        try {
+          unsubFirestore = onSnapshot(doc(firestoreDb, 'broadcast_states', syncKey), (docSnap) => {
+            if (!active) return;
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              if (data && data.stateJson) {
+                try {
+                  const parsedState = JSON.parse(data.stateJson);
+                  if (parsedState && parsedState.settings) {
+                    setAndPersistState(parsedState);
+                    if (!parsedState.activeReplay) {
+                      const endReplayEvent = new CustomEvent('broadcast-replay-end');
+                      window.dispatchEvent(endReplayEvent);
+                    }
                   }
+                } catch (e) {
+                  console.error('Failed to parse Firestore stateJson:', e);
                 }
-              } else if (payload.type === 'TRIGGER_REPLAY') {
-                const replayEvent = new CustomEvent('broadcast-replay');
-                window.dispatchEvent(replayEvent);
               }
             }
-          } catch (err) {
-            // Ignore parse errors
+          }, (err) => {
+            console.error('Firestore real-time subscription error:', err);
+          });
+        } catch (err) {
+          console.error('Failed to setup Firestore listener:', err);
+        }
+      } else {
+        console.log('Establishing SSE ntfy.sh fallback listener for syncKey:', syncKey);
+        const connectSse = () => {
+          try {
+            sse = new EventSource(`https://ntfy.sh/${syncKey}/sse`);
+
+            sse.onmessage = (event) => {
+              try {
+                const data = JSON.parse(event.data);
+                if (data.event === 'message' && data.message) {
+                  const payload = JSON.parse(data.message);
+                  
+                  // Skip if sent by our own client instance
+                  if (payload.sender === clientId.current) {
+                    return;
+                  }
+
+                  if (payload.type === 'STATE_UPDATE' && payload.state) {
+                    if (payload.state.settings) {
+                      setAndPersistState(payload.state);
+                      if (!payload.state.activeReplay) {
+                        const endReplayEvent = new CustomEvent('broadcast-replay-end');
+                        window.dispatchEvent(endReplayEvent);
+                      }
+                    }
+                  } else if (payload.type === 'TRIGGER_REPLAY') {
+                    const replayEvent = new CustomEvent('broadcast-replay');
+                    window.dispatchEvent(replayEvent);
+                  }
+                }
+              } catch (err) {
+                // Ignore parse errors
+              }
+            };
+
+            sse.onerror = () => {
+              if (sse) sse.close();
+              reconnectTimeout = window.setTimeout(() => {
+                if (active) connectSse();
+              }, 3000);
+            };
+          } catch (e) {
+            console.error('Failed to establish Cloud Sync EventSource:', e);
           }
         };
 
-        sse.onerror = () => {
-          if (sse) sse.close();
-          reconnectTimeout = window.setTimeout(() => {
-            connectSse();
-          }, 3000);
-        };
-      } catch (e) {
-        console.error('Failed to establish Cloud Sync EventSource:', e);
+        connectSse();
       }
     };
 
-    connectSse();
+    startSubscription();
 
     return () => {
+      active = false;
+      if (unsubFirestore) {
+        unsubFirestore();
+      }
       if (sse) {
         sse.close();
       }

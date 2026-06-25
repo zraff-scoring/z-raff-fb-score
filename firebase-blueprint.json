@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "BroadcastState": {
+      "title": "BroadcastState",
+      "description": "Represents the full layout, scoreboard, timer, stats, and overlays state of a live stream broadcast.",
+      "type": "object",
+      "properties": {
+        "syncKey": {
+          "type": "string",
+          "description": "Unique key identifying the broadcast sync channel."
+        },
+        "ownerUid": {
+          "type": "string",
+          "description": "UID of the operator who owns and controls this broadcast state."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this broadcast state was last modified."
+        },
+        "stateJson": {
+          "type": "string",
+          "description": "Serialized JSON string of the BroadcastState object containing all game data and configuration."
+        }
+      },
+      "required": ["syncKey", "updatedAt", "stateJson"]
+    }
+  },
+  "firestore": {
+    "/broadcast_states/{syncKey}": {
+      "schema": {
+        "$ref": "#/entities/BroadcastState"
+      },
+      "description": "Stores current real-time stream state under a unique shareable sync key, accessible by OBS and controllers."
+    }
+  }
+}
