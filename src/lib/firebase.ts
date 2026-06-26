@@ -15,6 +15,9 @@ import {
   setDoc,
   onSnapshot,
   getDoc,
+  collection,
+  query,
+  getDocs,
   Firestore
 } from 'firebase/firestore';
 
@@ -150,5 +153,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-export { auth, db, googleProvider, isMock, signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, onSnapshot, getDoc };
+export { auth, db, googleProvider, isMock, signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, onSnapshot, getDoc, collection, query, getDocs };
 export type { User, Firestore };

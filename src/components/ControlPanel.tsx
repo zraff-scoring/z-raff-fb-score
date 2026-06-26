@@ -13,8 +13,9 @@ import ScoreboardCategory from './ScoreboardCategory.js';
 import TimerCategory from './TimerCategory.js';
 import LineupsCategory from './LineupsCategory.js';
 import OverlaysCategory from './OverlaysCategory.js';
+import UsersCategory from './UsersCategory.js';
 
-type CategoryType = 'match' | 'scoreboard' | 'timer' | 'lineups' | 'overlays';
+type CategoryType = 'match' | 'scoreboard' | 'timer' | 'lineups' | 'overlays' | 'users';
 
 export default function ControlPanel() {
   const { user, userProfile, logout } = useAuth();
@@ -272,7 +273,7 @@ export default function ControlPanel() {
       {/* ---------------------------------------------------- */}
       {/* CATEGORY SELECTOR TABS */}
       {/* ---------------------------------------------------- */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         {[
           { 
             id: 'match', 
@@ -308,6 +309,13 @@ export default function ControlPanel() {
             icon: Layout, 
             desc: 'Lower thirds, stats, sponsors, subs, VAR', 
             active: !!(state.activeLowerThird || state.stats.activeStatsView || state.activeSponsor?.type || state.activeSocial?.platform || state.activeCard || state.activeSubstitution || state.activeVAR || state.activeReplay) 
+          },
+          {
+            id: 'users',
+            label: 'Broadcasters',
+            icon: User,
+            desc: 'Operators directory & Firebase profiles',
+            active: false
           }
         ].map((cat) => {
           const Icon = cat.icon;
@@ -389,6 +397,10 @@ export default function ControlPanel() {
             updateState={updateState} 
             triggerReplay={triggerReplay} 
           />
+        )}
+
+        {activeCategory === 'users' && (
+          <UsersCategory />
         )}
       </main>
 

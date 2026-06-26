@@ -34,7 +34,8 @@ service cloud.firestore {
 
     // Match user profiles by authenticated UID
     match /user_profiles/{uid} {
-      allow read, write: if isAuthenticated() && request.auth.uid == uid;
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == uid;
     }
   }
 }
