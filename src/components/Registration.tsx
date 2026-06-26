@@ -9,7 +9,7 @@ interface RegistrationProps {
 }
 
 export default function Registration({ onBackToLogin, onGoToVerify }: RegistrationProps) {
-  const { registerUser } = useAuth();
+  const { registerUser, signInWithGoogle, isMockAuth } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -24,6 +24,25 @@ export default function Registration({ onBackToLogin, onGoToVerify }: Registrati
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleGoogleSignUp = async () => {
+    setError(null);
+    setIsGoogleLoading(true);
+    try {
+      const loggedUser = await signInWithGoogle();
+      if (loggedUser) {
+        if (!loggedUser.emailVerified && !isMockAuth) {
+          onGoToVerify();
+        }
+      }
+    } catch (err: any) {
+      console.error('Google sign-up error:', err);
+      setError(err?.message || 'Google Authentication failed. Please try again.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   // Strength Checkers
   const getPasswordCriteria = () => {
@@ -339,6 +358,43 @@ export default function Registration({ onBackToLogin, onGoToVerify }: Registrati
                 <Sparkles className="w-4 h-4" />
               )}
               <span>{loading ? 'Creating Account...' : 'Complete Register'}</span>
+            </button>
+
+            <div className="relative flex py-4 items-center">
+              <div className="flex-grow border-t border-slate-800"></div>
+              <span className="flex-shrink mx-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">or continue with</span>
+              <div className="flex-grow border-t border-slate-800"></div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignUp}
+              disabled={loading || isGoogleLoading}
+              className="w-full py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 text-white rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-lg active:scale-[0.98] disabled:opacity-50"
+            >
+              {isGoogleLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" width="16" height="16">
+                  <path
+                    fill="#EA4335"
+                    d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.33 0 3.321 2.673 1.391 6.573L5.266 9.765z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M24 12.273c0-.818-.082-1.636-.218-2.427H12v4.61h6.736A5.762 5.762 0 0 1 16.2 18.255l3.855 2.99C22.31 19.1 24 15.918 24 12.273z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.266 14.235L1.39 17.427A11.961 11.961 0 0 1 0 12c0-1.927.455-3.755 1.264-5.382l3.963 3.091a7.09 7.09 0 0 0 0 4.526z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.245 0 5.973-1.073 7.964-2.927l-3.855-2.99a7.314 7.314 0 0 1-4.11 1.145c-3.154 0-5.836-2.118-6.79-4.99L1.31 17.31C3.218 21.145 7.273 24 12 24z"
+                  />
+                </svg>
+              )}
+              <span>{isGoogleLoading ? 'Connecting...' : 'Sign up with Google'}</span>
             </button>
           </form>
         </div>

@@ -14,7 +14,9 @@ import {
   limit,
   ref,
   uploadBytes,
-  getDownloadURL
+  getDownloadURL,
+  googleProvider,
+  signInWithPopup
 } from '../lib/firebase.js';
 import { 
   createUserWithEmailAndPassword,
@@ -62,6 +64,7 @@ interface AuthContextType {
   // Auth Operations
   registerUser: (data: any) => Promise<any>;
   loginUser: (email: string, pass: string, remember: boolean) => Promise<any>;
+  signInWithGoogle: () => Promise<any>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   verifyEmail: () => Promise<void>;
@@ -777,6 +780,177 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // SIGN IN WITH GOOGLE
+  const signInWithGoogle = async () => {
+    setProfileLoading(true);
+    try {
+      if (!isMockAuth && firebaseAuth && firebaseDb) {
+        try {
+          const { googleProvider: localProvider } = await initFirebase();
+          if (!localProvider) {
+            throw new Error('Google Provider not initialized');
+          }
+          const result = await signInWithPopup(firebaseAuth, localProvider);
+          const firebaseUser = result.user;
+
+          // Check if user document already exists in Firestore
+          const docRef = doc(firebaseDb, 'users', firebaseUser.uid);
+          const userDoc = await getDoc(docRef);
+
+          let profile: UserProfile;
+          const details = detectSessionDetails();
+
+          if (userDoc.exists()) {
+            profile = userDoc.data() as UserProfile;
+            
+            if (profile.status === 'disabled') {
+              await signOut(firebaseAuth);
+              throw new Error('Your account has been disabled by an Administrator.');
+            }
+
+            const updatedProfile = {
+              ...profile,
+              lastLogin: details.loginTime,
+              device: details.device,
+              browser: details.browser,
+              os: details.os,
+              loginTime: details.loginTime,
+              emailVerified: firebaseUser.emailVerified,
+              isVerified: firebaseUser.emailVerified
+            };
+
+            await setDocWithRetry(docRef, updatedProfile, { merge: true });
+            setUserProfile(updatedProfile);
+          } else {
+            // Create a new profile for the newly signed up Google user
+            const nameParts = firebaseUser.displayName?.split(' ') || [];
+            const firstName = nameParts[0] || 'Google';
+            const lastName = nameParts.slice(1).join(' ') || 'User';
+            const username = firebaseUser.email?.split('@')[0] || 'google_user';
+
+            profile = {
+              uid: firebaseUser.uid,
+              firstName,
+              lastName,
+              username,
+              email: firebaseUser.email || '',
+              phone: firebaseUser.phoneNumber || '',
+              photoURL: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces',
+              role: 'Operator',
+              createdAt: new Date().toISOString(),
+              lastLogin: details.loginTime,
+              status: 'active',
+              emailVerified: firebaseUser.emailVerified,
+              isVerified: firebaseUser.emailVerified,
+              device: details.device,
+              browser: details.browser,
+              os: details.os,
+              loginTime: details.loginTime,
+              favoriteSport: 'Football/Soccer',
+              fpsMode: '60',
+              audioCues: true
+            };
+
+            await setDocWithRetry(docRef, profile);
+            setUserProfile(profile);
+          }
+
+          setUser(firebaseUser);
+          return firebaseUser;
+        } catch (err: any) {
+          const isOperationNotAllowed = err?.message?.toLowerCase().includes('operation-not-allowed') || 
+                                        err?.code === 'auth/operation-not-allowed' ||
+                                        err?.message?.toLowerCase().includes('configuration-not-found') ||
+                                        err?.code?.toLowerCase().includes('operation-not-allowed') ||
+                                        err?.code?.toLowerCase().includes('configuration-not-found');
+          if (isOperationNotAllowed) {
+            console.warn('[Google Auth] Firebase Google Auth is not allowed. Falling back to Mock Google Auth.');
+            setIsMockAuth(true);
+            return await signInWithGoogleMock();
+          } else {
+            throw err;
+          }
+        }
+      } else {
+        return await signInWithGoogleMock();
+      }
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  // Helper for mock Google login
+  const signInWithGoogleMock = async () => {
+    const details = detectSessionDetails();
+    const email = 'crceshopbd@gmail.com'; 
+    const username = 'crceshopbd';
+    const firstName = 'Google';
+    const lastName = 'User';
+
+    const mockUsersRaw = localStorage.getItem('zraff_mock_users');
+    const currentUsers: UserProfile[] = mockUsersRaw ? JSON.parse(mockUsersRaw) : [...DEFAULT_MOCK_USERS];
+
+    let foundUser = currentUsers.find(
+      u => u.email.toLowerCase() === email.toLowerCase()
+    );
+
+    if (!foundUser) {
+      const newUid = 'mock-google-user-' + Math.random().toString(36).substr(2, 9);
+      foundUser = {
+        uid: newUid,
+        firstName,
+        lastName,
+        username,
+        email,
+        phone: '+1 555-123-4567',
+        photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces',
+        role: 'Operator',
+        createdAt: new Date().toISOString(),
+        lastLogin: details.loginTime,
+        status: 'active',
+        emailVerified: true,
+        isVerified: true,
+        device: details.device,
+        browser: details.browser,
+        os: details.os,
+        loginTime: details.loginTime,
+        favoriteSport: 'Football/Soccer',
+        fpsMode: '60',
+        audioCues: true
+      };
+
+      currentUsers.push(foundUser);
+      localStorage.setItem('zraff_mock_users', JSON.stringify(currentUsers));
+    } else {
+      if (foundUser.status === 'disabled') {
+        throw new Error('Your account has been disabled by an Administrator.');
+      }
+      foundUser.lastLogin = details.loginTime;
+      foundUser.device = details.device;
+      foundUser.browser = details.browser;
+      foundUser.os = details.os;
+      foundUser.loginTime = details.loginTime;
+
+      const idx = currentUsers.findIndex(u => u.uid === foundUser!.uid);
+      if (idx !== -1) {
+        currentUsers[idx] = foundUser;
+        localStorage.setItem('zraff_mock_users', JSON.stringify(currentUsers));
+      }
+    }
+
+    setUser({
+      uid: foundUser.uid,
+      email: foundUser.email,
+      displayName: `${foundUser.firstName} ${foundUser.lastName}`,
+      photoURL: foundUser.photoURL,
+      emailVerified: true
+    });
+    setUserProfile(foundUser);
+    localStorage.setItem('zraff_mock_session', JSON.stringify(foundUser));
+
+    return foundUser;
+  };
+
   // LOGOUT SERVICE
   const logout = async () => {
     setProfileLoading(true);
@@ -1010,6 +1184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin,
       registerUser,
       loginUser,
+      signInWithGoogle,
       logout,
       resetPassword,
       verifyEmail,
