@@ -217,9 +217,36 @@ const DEFAULT_MOCK_USERS: UserProfile[] = [
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<any | null>({
+    uid: 'mock-admin-uid',
+    email: 'admin@stream.com',
+    displayName: 'Admin Operator',
+    photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces',
+    emailVerified: true
+  });
+  const [userProfile, setUserProfile] = useState<UserProfile | null>({
+    uid: 'mock-admin-uid',
+    firstName: 'Admin',
+    lastName: 'Operator',
+    username: 'admin',
+    email: 'admin@stream.com',
+    phone: '+1 555-123-4567',
+    photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces',
+    role: 'Administrator',
+    createdAt: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
+    lastLogin: new Date().toISOString(),
+    status: 'active',
+    emailVerified: true,
+    isVerified: true,
+    device: 'Desktop',
+    browser: 'Chrome',
+    os: 'Windows',
+    loginTime: new Date().toISOString(),
+    favoriteSport: 'Esports',
+    fpsMode: '60',
+    audioCues: true
+  });
+  const [loading, setLoading] = useState<boolean>(false);
   const [profileLoading, setProfileLoading] = useState<boolean>(false);
   const [isMockAuth, setIsMockAuth] = useState<boolean>(true);
   
@@ -310,8 +337,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.error('Error fetching Firestore user profile:', err);
               }
             } else {
-              setUser(null);
-              setUserProfile(null);
+              // Bypassed: keep mock admin user active by not clearing state
+              console.log('[AuthContext] No Firebase user detected, retaining default Admin session.');
             }
             setLoading(false);
           });
@@ -339,8 +366,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 emailVerified: updatedProfile.emailVerified
               });
               setUserProfile(updatedProfile);
-            } else {
-              localStorage.removeItem('zraff_mock_session');
             }
           }
           setLoading(false);
@@ -958,18 +983,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // LOGOUT SERVICE
   const logout = async () => {
-    setProfileLoading(true);
-    try {
-      if (!isMockAuth && firebaseAuth) {
-        await signOut(firebaseAuth);
-      }
-      setUser(null);
-      setUserProfile(null);
-      localStorage.removeItem('zraff_mock_session');
-      sessionStorage.removeItem('zraff_mock_session');
-    } finally {
-      setProfileLoading(false);
-    }
+    console.log('[AuthContext] Logout bypassed because login system is completely disabled');
   };
 
   // PASSWORD RESET SERVICE
