@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Activity, Settings, EyeOff, Layout, Cast, HelpCircle, Trophy, Users, Copy, ExternalLink, Tv,
-  Cloud, CloudOff, RefreshCw, LogOut, Sliders, User
+  Cloud, CloudOff, RefreshCw, Sliders, User
 } from 'lucide-react';
 import { useBroadcast, DEFAULT_STATE } from '../hooks/useBroadcast.js';
 import { useAuth } from '../contexts/AuthContext.js';
@@ -114,22 +114,24 @@ export default function ControlPanel() {
         <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-end">
           {user && (
             <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl relative">
-              {user.photoURL ? (
+              {userProfile?.photoURL || user?.photoURL ? (
                 <img 
-                  src={user.photoURL} 
-                  alt={userProfile?.displayName || user.displayName || 'Avatar'} 
-                  className="w-7 h-7 rounded-full border border-slate-700" 
+                  src={userProfile?.photoURL || user?.photoURL} 
+                  alt={userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : (user.displayName || 'Avatar')} 
+                  className="w-7 h-7 rounded-full border border-slate-700 object-cover" 
                   referrerPolicy="no-referrer" 
                 />
               ) : (
                 <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-                  {(userProfile?.displayName || user.displayName)?.[0]?.toUpperCase() || 'U'}
+                  {userProfile?.firstName?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || 'U'}
                 </div>
               )}
-              <div className="text-left leading-none max-w-[140px]">
-                <p className="text-[10px] font-black text-white truncate">{userProfile?.displayName || user.displayName || 'Operator'}</p>
+              <div className="text-left leading-none max-w-[145px]">
+                <p className="text-[10px] font-black text-white truncate">
+                  {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : (user.displayName || 'Operator')}
+                </p>
                 <p className="text-[8px] text-slate-400 font-mono mt-0.5 truncate">
-                  {userProfile?.role ? `${userProfile.role} • ${userProfile.favoriteSport}` : (user.email || 'operator@stream')}
+                  {userProfile?.role ? `${userProfile.role} • ${userProfile.favoriteSport || 'General'}` : (user.email || 'operator@stream')}
                 </p>
               </div>
               
@@ -143,10 +145,12 @@ export default function ControlPanel() {
 
               <button
                 onClick={logout}
-                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer border border-transparent hover:border-rose-500/10 ml-0.5"
-                title="Sign Out"
+                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer border border-transparent hover:border-red-500/10"
+                title="Log Out Session"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
               </button>
             </div>
           )}

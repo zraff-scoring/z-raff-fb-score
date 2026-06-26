@@ -5,6 +5,12 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  updateProfile,
+  updatePassword,
   User,
   Auth
 } from 'firebase/auth';
@@ -18,8 +24,21 @@ import {
   collection,
   query,
   getDocs,
+  where,
+  deleteDoc,
+  updateDoc,
+  orderBy,
+  limit,
   Firestore
 } from 'firebase/firestore';
+import { 
+  getStorage, 
+  ref, 
+  uploadBytes, 
+  getDownloadURL, 
+  deleteObject,
+  FirebaseStorage 
+} from 'firebase/storage';
 
 // Standard Firebase config structure
 export interface FirebaseConfig {
@@ -35,6 +54,7 @@ export interface FirebaseConfig {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
 let isMock = false;
 
@@ -64,8 +84,8 @@ const envConfig: FirebaseConfig = {
 // Check if we have valid environment config
 const hasEnvConfig = !!(envConfig.apiKey && envConfig.authDomain && envConfig.projectId);
 
-export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore | null; googleProvider: GoogleAuthProvider | null; isMock: boolean }> {
-  if (auth || db || isMock) return { auth, db, googleProvider, isMock };
+export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore | null; storage: FirebaseStorage | null; googleProvider: GoogleAuthProvider | null; isMock: boolean }> {
+  if (auth || db || isMock) return { auth, db, storage, googleProvider, isMock };
 
   console.log('[Firebase Init] hasEnvConfig:', hasEnvConfig, 'envConfig:', {
     ...envConfig,
@@ -83,13 +103,18 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
       db = initializeFirestore(app, {
         experimentalForceLongPolling: true,
       }, envConfig.firestoreDatabaseId || undefined);
+      try {
+        storage = getStorage(app);
+      } catch (err) {
+        console.error('Failed to initialize Storage:', err);
+      }
       googleProvider = new GoogleAuthProvider();
       googleProvider.setCustomParameters({
         prompt: 'select_account'
       });
       isMock = false;
       console.log('Firebase initialized successfully via env variables.');
-      return { auth, db, googleProvider, isMock };
+      return { auth, db, storage, googleProvider, isMock };
     } catch (e) {
       console.error('Failed to initialize Firebase with env config, trying fetch...', e);
     }
@@ -124,13 +149,18 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
         db = initializeFirestore(app, {
           experimentalForceLongPolling: true,
         }, cleanedConfig.firestoreDatabaseId || undefined);
+        try {
+          storage = getStorage(app);
+        } catch (err) {
+          console.error('Failed to initialize Storage in fallback:', err);
+        }
         googleProvider = new GoogleAuthProvider();
         googleProvider.setCustomParameters({
           prompt: 'select_account'
         });
         isMock = false;
         console.log('Firebase initialized successfully via firebase-applet-config.json.');
-        return { auth, db, googleProvider, isMock };
+        return { auth, db, storage, googleProvider, isMock };
       }
     }
   } catch (e) {
@@ -140,7 +170,7 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
   // If no config is available, run in fully-functional Mock Mode for testing
   console.warn('Firebase configuration not found. Running in Developer Mock Mode.');
   isMock = true;
-  return { auth: null, db: null, googleProvider: null, isMock: true };
+  return { auth: null, db: null, storage: null, googleProvider: null, isMock: true };
 }
 
 export enum OperationType {
@@ -190,5 +220,36 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-export { auth, db, googleProvider, isMock, signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, onSnapshot, getDoc, collection, query, getDocs };
+export { 
+  auth, 
+  db, 
+  storage, 
+  googleProvider, 
+  isMock, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  updateProfile,
+  updatePassword,
+  doc, 
+  setDoc, 
+  onSnapshot, 
+  getDoc, 
+  collection, 
+  query, 
+  getDocs,
+  where,
+  deleteDoc,
+  updateDoc,
+  orderBy,
+  limit,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
+};
 export type { User, Firestore };

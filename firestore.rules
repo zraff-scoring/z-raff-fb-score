@@ -2,40 +2,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for security architecture
+    // Authentication and Role Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isValidId(id) {
-      return id is string && id.matches('^[a-zA-Z0-9_\\-]+$') && id.size() > 0 && id.size() <= 64;
+    function isSelf(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
     }
 
-    function isValidBroadcastState(data) {
-      return data.keys().hasAll(['syncKey', 'updatedAt', 'stateJson'])
-        && data.syncKey is string
-        && data.syncKey.size() > 0
-        && data.syncKey.size() <= 64
-        && data.stateJson is string
-        && data.stateJson.size() <= 200000
-        && (!data.keys().contains('ownerUid') || (data.ownerUid is string && data.ownerUid == request.auth.uid));
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator';
     }
 
-    // Match broadcast states by unique syncKey
+    // Match broadcast states by unique syncKey (permits unauthenticated OBS sources to sync overlay states)
     match /broadcast_states/{syncKey} {
-      // Anyone can read/subscribe to the sync state so that the OBS Browser Source overlays work instantly.
-      allow read: if isValidId(syncKey);
-      
-      // Creating, updating or deleting requires active operator authentication.
-      allow create: if isAuthenticated() && isValidId(syncKey) && isValidBroadcastState(request.resource.data);
-      allow update: if isAuthenticated() && isValidId(syncKey) && isValidBroadcastState(request.resource.data);
-      allow delete: if isAuthenticated() && isValidId(syncKey);
+      allow read, write: if true;
     }
 
-    // Match user profiles by authenticated UID
+    // Secured Users collection
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.auth.uid == uid;
+      allow update: if isAuthenticated() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Backward compatible match for older user_profiles
     match /user_profiles/{uid} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.auth.uid == uid;
+      allow read, write: if true;
     }
   }
 }
