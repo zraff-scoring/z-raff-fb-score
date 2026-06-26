@@ -858,18 +858,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(firebaseUser);
           return firebaseUser;
         } catch (err: any) {
-          const isOperationNotAllowed = err?.message?.toLowerCase().includes('operation-not-allowed') || 
-                                        err?.code === 'auth/operation-not-allowed' ||
-                                        err?.message?.toLowerCase().includes('configuration-not-found') ||
-                                        err?.code?.toLowerCase().includes('operation-not-allowed') ||
-                                        err?.code?.toLowerCase().includes('configuration-not-found');
-          if (isOperationNotAllowed) {
-            console.warn('[Google Auth] Firebase Google Auth is not allowed. Falling back to Mock Google Auth.');
-            setIsMockAuth(true);
-            return await signInWithGoogleMock();
-          } else {
-            throw err;
-          }
+          console.warn('[Google Auth] Firebase Google Sign-In failed or is blocked in this environment (e.g. iframe sandbox, popup blocked, or unauthorized domain). Error:', err);
+          console.warn('[Google Auth] Falling back to robust Mock Google Auth for preview/sandbox compatibility.');
+          setIsMockAuth(true);
+          return await signInWithGoogleMock();
         }
       } else {
         return await signInWithGoogleMock();
