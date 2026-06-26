@@ -50,17 +50,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isMockAuth, setIsMockAuth] = useState<boolean>(true);
   const [firebaseAuthInstance, setFirebaseAuthInstance] = useState<any>(null);
   const [firestoreInstance, setFirestoreInstance] = useState<any>(null);
+  const [googleProviderInstance, setGoogleProviderInstance] = useState<any>(null);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
     const setupAuth = async () => {
-      const { auth, db, isMock } = await initFirebase();
+      const { auth, db, googleProvider: provider, isMock } = await initFirebase();
       setIsMockAuth(isMock);
 
       if (!isMock && auth && db) {
         setFirebaseAuthInstance(auth);
         setFirestoreInstance(db);
+        setGoogleProviderInstance(provider);
         unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
             const currentAuthUser = {
@@ -170,9 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     setLoading(true);
-    if (!isMockAuth && firebaseAuthInstance && googleProvider) {
+    if (!isMockAuth && firebaseAuthInstance && googleProviderInstance) {
       try {
-        await signInWithPopup(firebaseAuthInstance, googleProvider);
+        await signInWithPopup(firebaseAuthInstance, googleProviderInstance);
       } catch (error: any) {
         console.error('Google Sign-In Error:', error);
         setLoading(false);
@@ -234,8 +236,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updatedProfile: UserProfile = {
       ...profileData,
       setupCompleted: true,
-      email: user.email || undefined,
-      photoURL: user.photoURL || undefined,
+      email: user.email || '',
+      photoURL: user.photoURL || '',
     };
 
     if (!isMockAuth && firebaseAuthInstance && firestoreInstance) {

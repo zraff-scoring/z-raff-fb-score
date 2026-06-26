@@ -39,21 +39,38 @@ let googleProvider: GoogleAuthProvider | null = null;
 let isMock = false;
 
 // Attempt to detect configuration from environment variables
+const cleanEnvVar = (val: string | undefined): string => {
+  if (!val) return '';
+  const trimmed = val.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+};
+
 const envConfig: FirebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || '',
+  apiKey: cleanEnvVar(import.meta.env.VITE_FIREBASE_API_KEY),
+  authDomain: cleanEnvVar(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN),
+  projectId: cleanEnvVar(import.meta.env.VITE_FIREBASE_PROJECT_ID),
+  storageBucket: cleanEnvVar(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: cleanEnvVar(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID),
+  appId: cleanEnvVar(import.meta.env.VITE_FIREBASE_APP_ID),
+  firestoreDatabaseId: cleanEnvVar(import.meta.env.VITE_FIREBASE_DATABASE_ID),
 };
 
 // Check if we have valid environment config
-const hasEnvConfig = envConfig.apiKey && envConfig.authDomain && envConfig.projectId;
+const hasEnvConfig = !!(envConfig.apiKey && envConfig.authDomain && envConfig.projectId);
 
-export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore | null; isMock: boolean }> {
-  if (auth || db || isMock) return { auth, db, isMock };
+export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore | null; googleProvider: GoogleAuthProvider | null; isMock: boolean }> {
+  if (auth || db || isMock) return { auth, db, googleProvider, isMock };
+
+  console.log('[Firebase Init] hasEnvConfig:', hasEnvConfig, 'envConfig:', {
+    ...envConfig,
+    apiKey: envConfig.apiKey ? '***' + envConfig.apiKey.slice(-5) : '',
+  });
 
   if (hasEnvConfig) {
     try {
@@ -72,7 +89,7 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
       });
       isMock = false;
       console.log('Firebase initialized successfully via env variables.');
-      return { auth, db, isMock };
+      return { auth, db, googleProvider, isMock };
     } catch (e) {
       console.error('Failed to initialize Firebase with env config, trying fetch...', e);
     }
@@ -83,33 +100,47 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
     const response = await fetch('/firebase-applet-config.json');
     if (response.ok) {
       const config = await response.json();
+      console.log('[Firebase Init] fetched fallback config:', {
+        ...config,
+        apiKey: config.apiKey ? '***' + config.apiKey.slice(-5) : '',
+      });
       if (config && config.apiKey && config.projectId) {
+        const cleanedConfig = {
+          apiKey: cleanEnvVar(config.apiKey),
+          authDomain: cleanEnvVar(config.authDomain),
+          projectId: cleanEnvVar(config.projectId),
+          storageBucket: cleanEnvVar(config.storageBucket),
+          messagingSenderId: cleanEnvVar(config.messagingSenderId),
+          appId: cleanEnvVar(config.appId),
+          firestoreDatabaseId: cleanEnvVar(config.firestoreDatabaseId),
+        };
+
         if (getApps().length === 0) {
-          app = initializeApp(config);
+          app = initializeApp(cleanedConfig);
         } else {
           app = getApp();
         }
         auth = getAuth(app);
         db = initializeFirestore(app, {
           experimentalForceLongPolling: true,
-        }, config.firestoreDatabaseId || undefined);
+        }, cleanedConfig.firestoreDatabaseId || undefined);
         googleProvider = new GoogleAuthProvider();
         googleProvider.setCustomParameters({
           prompt: 'select_account'
         });
         isMock = false;
         console.log('Firebase initialized successfully via firebase-applet-config.json.');
-        return { auth, db, isMock };
+        return { auth, db, googleProvider, isMock };
       }
     }
   } catch (e) {
-    // File not found or failed to parse, which is expected before Firebase setup is finished
+    console.error('Failed to fetch/parse firebase-applet-config.json fallback:', e);
   }
 
   // If no config is available, run in fully-functional Mock Mode for testing
   console.warn('Firebase configuration not found. Running in Developer Mock Mode.');
   isMock = true;
-  return { auth: null, db: null, isMock: true };
+  return { auth: null, db: null, googleProvider: null, isMock: true };
 }
 
 export enum OperationType {
