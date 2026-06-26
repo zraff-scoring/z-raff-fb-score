@@ -101,10 +101,8 @@ export default function ControlPanel() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black tracking-tight text-white leading-none">Z-raff Sports Control Panel</h1>
-              <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold tracking-wider uppercase ${
-                isConnected ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-              }`}>
-                {isConnected ? '● Connected' : '○ Offline'}
+              <span className="px-2 py-0.5 rounded text-[8px] font-mono font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                ● Connected
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">Live broadcast operator deck • Controls live OBS Browser Source output</p>
