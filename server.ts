@@ -172,6 +172,11 @@ async function startServer() {
   
   app.use(express.json());
 
+  // Serve firebase-applet-config.json for client initialization fallback
+  app.get('/firebase-applet-config.json', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'firebase-applet-config.json'));
+  });
+
   // API REST Endpoints for easier controls (backup / redundancy)
   app.get('/api/state', (req, res) => {
     res.json(currentState);

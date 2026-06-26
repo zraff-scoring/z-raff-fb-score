@@ -67,6 +67,9 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
         experimentalForceLongPolling: true,
       }, envConfig.firestoreDatabaseId || undefined);
       googleProvider = new GoogleAuthProvider();
+      googleProvider.setCustomParameters({
+        prompt: 'select_account'
+      });
       isMock = false;
       console.log('Firebase initialized successfully via env variables.');
       return { auth, db, isMock };
@@ -91,6 +94,9 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
           experimentalForceLongPolling: true,
         }, config.firestoreDatabaseId || undefined);
         googleProvider = new GoogleAuthProvider();
+        googleProvider.setCustomParameters({
+          prompt: 'select_account'
+        });
         isMock = false;
         console.log('Firebase initialized successfully via firebase-applet-config.json.');
         return { auth, db, isMock };
