@@ -31,5 +31,10 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isValidId(syncKey) && isValidBroadcastState(request.resource.data);
       allow delete: if isAuthenticated() && isValidId(syncKey);
     }
+
+    // Match user profiles by authenticated UID
+    match /user_profiles/{uid} {
+      allow read, write: if isAuthenticated() && request.auth.uid == uid;
+    }
   }
 }

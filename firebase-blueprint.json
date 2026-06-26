@@ -24,6 +24,39 @@
         }
       },
       "required": ["syncKey", "updatedAt", "stateJson"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Represents the personalized configuration and stream operator details for an authenticated user.",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "The custom display name of the operator."
+        },
+        "role": {
+          "type": "string",
+          "description": "The broadcast role/specialty of the operator."
+        },
+        "favoriteSport": {
+          "type": "string",
+          "description": "The primary sport the operator broadcasts."
+        },
+        "fpsMode": {
+          "type": "string",
+          "enum": ["30", "60"],
+          "description": "Target FPS of the custom stream overlay (30 or 60)."
+        },
+        "audioCues": {
+          "type": "boolean",
+          "description": "Whether interactive audio cues are enabled on the control panel."
+        },
+        "setupCompleted": {
+          "type": "boolean",
+          "description": "Flag indicating that user profile onboarding is complete."
+        }
+      },
+      "required": ["displayName", "role", "favoriteSport", "fpsMode", "audioCues", "setupCompleted"]
     }
   },
   "firestore": {
@@ -32,6 +65,12 @@
         "$ref": "#/entities/BroadcastState"
       },
       "description": "Stores current real-time stream state under a unique shareable sync key, accessible by OBS and controllers."
+    },
+    "/user_profiles/{uid}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores customized operator settings and profile information per authenticated user."
     }
   }
 }

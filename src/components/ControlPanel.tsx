@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { 
   Activity, Settings, EyeOff, Layout, Cast, HelpCircle, Trophy, Users, Copy, ExternalLink, Tv,
-  Cloud, CloudOff, RefreshCw, LogOut
+  Cloud, CloudOff, RefreshCw, LogOut, Sliders, User
 } from 'lucide-react';
 import { useBroadcast, DEFAULT_STATE } from '../hooks/useBroadcast.js';
 import { useAuth } from '../contexts/AuthContext.js';
+import ProfileSetup from './ProfileSetup.js';
 
 // Import our modular category components
 import MatchCategory from './MatchCategory.js';
@@ -16,7 +17,7 @@ import OverlaysCategory from './OverlaysCategory.js';
 type CategoryType = 'match' | 'scoreboard' | 'timer' | 'lineups' | 'overlays';
 
 export default function ControlPanel() {
-  const { user, logout } = useAuth();
+  const { user, userProfile, logout } = useAuth();
   const { 
     state, 
     updateState, 
@@ -30,6 +31,7 @@ export default function ControlPanel() {
   } = useBroadcast();
   const [activeCategory, setActiveCategory] = useState<CategoryType>('match');
   const [copied, setCopied] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const getOverlayUrl = () => {
     if (typeof window === 'undefined') return '/output';
@@ -110,26 +112,37 @@ export default function ControlPanel() {
 
         <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-end">
           {user && (
-            <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl">
+            <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl relative">
               {user.photoURL ? (
                 <img 
                   src={user.photoURL} 
-                  alt={user.displayName || 'Avatar'} 
+                  alt={userProfile?.displayName || user.displayName || 'Avatar'} 
                   className="w-7 h-7 rounded-full border border-slate-700" 
                   referrerPolicy="no-referrer" 
                 />
               ) : (
                 <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-                  {user.displayName?.[0]?.toUpperCase() || 'U'}
+                  {(userProfile?.displayName || user.displayName)?.[0]?.toUpperCase() || 'U'}
                 </div>
               )}
-              <div className="text-left leading-none max-w-[120px]">
-                <p className="text-[10px] font-black text-white truncate">{user.displayName || 'Operator'}</p>
-                <p className="text-[8px] text-slate-400 font-mono mt-0.5 truncate">{user.email || 'operator@stream'}</p>
+              <div className="text-left leading-none max-w-[140px]">
+                <p className="text-[10px] font-black text-white truncate">{userProfile?.displayName || user.displayName || 'Operator'}</p>
+                <p className="text-[8px] text-slate-400 font-mono mt-0.5 truncate">
+                  {userProfile?.role ? `${userProfile.role} • ${userProfile.favoriteSport}` : (user.email || 'operator@stream')}
+                </p>
               </div>
+              
+              <button
+                onClick={() => setIsEditingProfile(true)}
+                className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all cursor-pointer border border-transparent hover:border-blue-500/10"
+                title="Edit Profile Settings"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+              </button>
+
               <button
                 onClick={logout}
-                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer border border-transparent hover:border-rose-500/10 ml-1"
+                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer border border-transparent hover:border-rose-500/10 ml-0.5"
                 title="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -379,6 +392,9 @@ export default function ControlPanel() {
         )}
       </main>
 
+      {isEditingProfile && (
+        <ProfileSetup onClose={() => setIsEditingProfile(false)} />
+      )}
     </div>
   );
 }
