@@ -858,10 +858,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(firebaseUser);
           return firebaseUser;
         } catch (err: any) {
-          console.warn('[Google Auth] Firebase Google Sign-In failed or is blocked in this environment (e.g. iframe sandbox, popup blocked, or unauthorized domain). Error:', err);
-          console.warn('[Google Auth] Falling back to robust Mock Google Auth for preview/sandbox compatibility.');
-          setIsMockAuth(true);
-          return await signInWithGoogleMock();
+          console.error('[Google Auth] Firebase Google Sign-In failed:', err);
+          
+          if (err?.code === 'auth/popup-blocked') {
+            throw new Error('Sign-in popup was blocked by your browser. Please allow popups for this site or open the app in a new tab.');
+          } else if (err?.code === 'auth/cancelled-popup-request') {
+            throw new Error('Sign-in popup was closed before completing authentication.');
+          } else if (err?.code === 'auth/operation-not-allowed') {
+            throw new Error('Google Sign-In is not enabled in your Firebase Console. Please enable "Google" as a Sign-in provider in Authentication -> Sign-in method.');
+          } else if (err?.code === 'auth/unauthorized-domain') {
+            throw new Error('This domain is not authorized for Google Sign-In in your Firebase Console.');
+          } else {
+            const errMsg = err?.message || '';
+            if (errMsg.toLowerCase().includes('iframe') || errMsg.toLowerCase().includes('cookie') || errMsg.toLowerCase().includes('network') || errMsg.toLowerCase().includes('popup')) {
+              throw new Error(`Google Sign-In failed: ${err.message || 'Iframe/cookie restriction detected'}. Please try opening the app in a new tab.`);
+            }
+            throw err;
+          }
         }
       } else {
         return await signInWithGoogleMock();
