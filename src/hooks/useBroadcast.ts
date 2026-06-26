@@ -152,7 +152,9 @@ export function useBroadcast() {
     return DEFAULT_STATE;
   });
 
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
+  const [isRestConnected, setIsRestConnected] = useState<boolean>(false);
+  const isConnected = isWsConnected || isRestConnected;
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
 
@@ -229,13 +231,18 @@ export function useBroadcast() {
     const fetchInitialState = async () => {
       try {
         const res = await fetch('/api/state');
-        if (!res.ok) return;
+        if (!res.ok) {
+          setIsRestConnected(false);
+          return;
+        }
         const data = await res.json();
         if (active && data && typeof data === 'object' && data.settings) {
           setAndPersistState(data);
+          setIsRestConnected(true);
         }
       } catch (err) {
         // Silently ignore initial fetch errors (running serverless)
+        setIsRestConnected(false);
       }
     };
     fetchInitialState();
@@ -333,7 +340,7 @@ export function useBroadcast() {
     socketRef.current = socket;
 
     socket.onopen = () => {
-      setIsConnected(true);
+      setIsWsConnected(true);
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -359,7 +366,7 @@ export function useBroadcast() {
     };
 
     socket.onclose = () => {
-      setIsConnected(false);
+      setIsWsConnected(false);
       reconnectTimeoutRef.current = window.setTimeout(() => {
         connect();
       }, 3000);
@@ -412,23 +419,30 @@ export function useBroadcast() {
 
   // HTTP polling fallback when WebSocket is not connected or fails
   useEffect(() => {
-    if (isConnected) return;
+    if (isWsConnected) {
+      setIsRestConnected(false);
+      return;
+    }
 
     const interval = setInterval(async () => {
       try {
         const res = await fetch('/api/state');
-        if (!res.ok) return;
+        if (!res.ok) {
+          setIsRestConnected(false);
+          return;
+        }
         const data = await res.json();
         if (data && typeof data === 'object' && data.settings) {
           setAndPersistState(data);
+          setIsRestConnected(true);
         }
       } catch (err) {
-        // Silent (running offline/standalone)
+        setIsRestConnected(false);
       }
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isConnected, setAndPersistState]);
+  }, [isWsConnected, setAndPersistState]);
 
   // Helper to publish updates to Firestore or fallback ntfy.sh Cloud Sync topic
   const publishToCloud = useCallback(async (payload: any) => {
