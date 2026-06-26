@@ -167,22 +167,60 @@ export default function TimerCategory({ state, updateState }: TimerCategoryProps
       <div className="border-t border-slate-800 pb-5 pt-4">
         <div className="flex justify-between items-center mb-3">
           <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-black">
-            Injury / Added Time
+            Injury / Added Time (Manual Input or Slider)
           </span>
           <span className="text-xs font-mono font-black text-emerald-400">
             {state.timer.injuryTimeMinutes} Min Added
           </span>
         </div>
-        <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-xl border border-slate-850">
-          <input 
-            type="range" 
-            min="0" 
-            max="15" 
-            value={state.timer.injuryTimeMinutes}
-            onChange={(e) => setInjuryTime(parseInt(e.target.value) || 0)}
-            className="flex-1 accent-emerald-500 bg-slate-900 h-2 rounded-full cursor-pointer"
-            id="clock-injury-slider"
-          />
+        <div className="flex flex-col gap-4 bg-slate-950 p-4 rounded-xl border border-slate-850">
+          <div className="flex items-center gap-4">
+            <input 
+              type="range" 
+              min="0" 
+              max={Math.max(15, state.timer.injuryTimeMinutes)} 
+              value={state.timer.injuryTimeMinutes}
+              onChange={(e) => setInjuryTime(parseInt(e.target.value) || 0)}
+              className="flex-1 accent-emerald-500 bg-slate-900 h-2 rounded-full cursor-pointer"
+              id="clock-injury-slider"
+            />
+            
+            <div className="flex items-center gap-2 shrink-0">
+              <input
+                type="number"
+                min="0"
+                max="99"
+                value={state.timer.injuryTimeMinutes === 0 ? "" : state.timer.injuryTimeMinutes}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setInjuryTime(isNaN(val) ? 0 : val);
+                }}
+                placeholder="0"
+                className="w-16 px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-center font-mono font-bold text-white focus:outline-none focus:border-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-sm"
+                id="clock-injury-input"
+              />
+              <span className="text-[10px] font-mono font-black text-slate-400 uppercase">MIN</span>
+            </div>
+          </div>
+
+          {/* Quick presets */}
+          <div className="flex items-center gap-1.5 border-t border-slate-900/60 pt-3 flex-wrap">
+            <span className="text-[9px] font-mono uppercase tracking-wider text-slate-500 font-bold mr-1">Presets:</span>
+            {[0, 1, 2, 3, 4, 5, 8, 10].map((mins) => (
+              <button
+                key={mins}
+                onClick={() => setInjuryTime(mins)}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-black transition-colors cursor-pointer ${
+                  state.timer.injuryTimeMinutes === mins
+                    ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800/60'
+                }`}
+                id={`btn-injury-preset-${mins}`}
+              >
+                {mins === 0 ? 'Clear' : `+${mins}`}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
