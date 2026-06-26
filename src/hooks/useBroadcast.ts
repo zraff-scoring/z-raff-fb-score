@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BroadcastState, Player } from '../types.js';
-import { initFirebase, doc, setDoc, onSnapshot, getDoc } from '../lib/firebase.js';
+import {
+  initFirebase,
+  doc,
+  setDoc,
+  onSnapshot,
+  getDoc,
+  handleFirestoreError,
+  OperationType
+} from '../lib/firebase.js';
 
 // Default mock players matching the server setup
 const defaultHomeXI: Player[] = [
@@ -268,6 +276,11 @@ export function useBroadcast() {
           }
         } catch (err) {
           console.error('Failed to fetch initial state from Firestore (falling back to ntfy):', err);
+          try {
+            handleFirestoreError(err, OperationType.GET, `broadcast_states/${syncKey}`);
+          } catch (thrownErr) {
+            // Error captured, continue fallback gracefully
+          }
         }
       }
 
@@ -427,12 +440,16 @@ export function useBroadcast() {
     if (!isFirebaseMock && firestoreDb) {
       try {
         if (payload.type === 'STATE_UPDATE' && payload.state) {
-          await setDoc(doc(firestoreDb, 'broadcast_states', syncKey), {
-            syncKey,
-            updatedAt: new Date().toISOString(),
-            stateJson: JSON.stringify(payload.state)
-          });
-          publishedToFirestore = true;
+          try {
+            await setDoc(doc(firestoreDb, 'broadcast_states', syncKey), {
+              syncKey,
+              updatedAt: new Date().toISOString(),
+              stateJson: JSON.stringify(payload.state)
+            });
+            publishedToFirestore = true;
+          } catch (err) {
+            handleFirestoreError(err, OperationType.WRITE, `broadcast_states/${syncKey}`);
+          }
         }
       } catch (err) {
         console.error('Firestore failed to save state, trying ntfy fallback:', err);
@@ -585,6 +602,11 @@ export function useBroadcast() {
             }
           }, (err) => {
             console.error('Firestore real-time subscription error (falling back to ntfy SSE):', err);
+            try {
+              handleFirestoreError(err, OperationType.GET, `broadcast_states/${syncKey}`);
+            } catch (thrownErr) {
+              // Captured error, fallback gracefully
+            }
             if (active) {
               connectSse();
             }

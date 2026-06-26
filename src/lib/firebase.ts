@@ -9,6 +9,7 @@ import {
   Auth
 } from 'firebase/auth';
 import {
+  initializeFirestore,
   getFirestore,
   doc,
   setDoc,
@@ -25,6 +26,7 @@ export interface FirebaseConfig {
   storageBucket?: string;
   messagingSenderId?: string;
   appId?: string;
+  firestoreDatabaseId?: string;
 }
 
 let app: FirebaseApp | null = null;
@@ -41,6 +43,7 @@ const envConfig: FirebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || '',
 };
 
 // Check if we have valid environment config
@@ -57,7 +60,9 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
         app = getApp();
       }
       auth = getAuth(app);
-      db = getFirestore(app);
+      db = initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+      }, envConfig.firestoreDatabaseId || undefined);
       googleProvider = new GoogleAuthProvider();
       isMock = false;
       console.log('Firebase initialized successfully via env variables.');
@@ -79,7 +84,9 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
           app = getApp();
         }
         auth = getAuth(app);
-        db = getFirestore(app);
+        db = initializeFirestore(app, {
+          experimentalForceLongPolling: true,
+        }, config.firestoreDatabaseId || undefined);
         googleProvider = new GoogleAuthProvider();
         isMock = false;
         console.log('Firebase initialized successfully via firebase-applet-config.json.');
@@ -94,6 +101,53 @@ export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore
   console.warn('Firebase configuration not found. Running in Developer Mock Mode.');
   isMock = true;
   return { auth: null, db: null, isMock: true };
+}
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth?.currentUser?.uid || null,
+      email: auth?.currentUser?.email || null,
+      emailVerified: auth?.currentUser?.emailVerified || null,
+      isAnonymous: auth?.currentUser?.isAnonymous || null,
+      tenantId: auth?.currentUser?.tenantId || null,
+      providerInfo: auth?.currentUser?.providerData?.map((provider: any) => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
 }
 
 export { auth, db, googleProvider, isMock, signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, onSnapshot, getDoc };

@@ -8,13 +8,22 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
 
+  const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+
   const handleSignIn = async () => {
     setError(null);
     setIsSigningIn(true);
     try {
       await loginWithGoogle();
     } catch (err: any) {
-      setError(err?.message || 'Failed to sign in with Google. Please try again.');
+      console.error('Sign-in error details:', err);
+      if (isIframe) {
+        setError(
+          'Google Sign-In is blocked inside this iframe preview. Please click the "Open in New Tab" button below or in the top-right corner to authenticate.'
+        );
+      } else {
+        setError(err?.message || 'Failed to sign in with Google. Please try again.');
+      }
     } finally {
       setIsSigningIn(false);
     }
@@ -56,6 +65,27 @@ export default function Login() {
           <p className="text-xs text-slate-400 mb-6">
             Authentication is required to view and modify overlay configurations. Please sign in to proceed.
           </p>
+
+          {isIframe && !isMockAuth && (
+            <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-400 flex flex-col gap-2">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                <span className="font-bold">Iframe Preview Restricted</span>
+              </div>
+              <p className="text-[10px] text-slate-300 leading-relaxed pl-6.5">
+                Modern browser security policies block Google Auth popups inside iframe previews. Please click below to open the application in a new tab where sign-in will work perfectly.
+              </p>
+              <a
+                href={window.location.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 self-start inline-flex items-center gap-1.5 text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-3.5 py-1.5 rounded-lg font-bold transition-colors ml-6.5"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Open in New Tab & Sign In</span>
+              </a>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-start gap-2.5">
