@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, collection, getDocs, query, isMock } from '../lib/firebase.js';
+import { initFirebase, collection, getDocs, query } from '../lib/firebase.js';
 import { UserProfile, useAuth } from '../contexts/AuthContext.js';
 import { Users, Search, Shield, BadgeCheck, Cpu, Volume2, Sparkles, RefreshCw, AlertCircle, Calendar } from 'lucide-react';
 
@@ -20,7 +20,8 @@ export default function UsersCategory() {
     setLoading(true);
     setError(null);
     try {
-      if (!isMockAuth && db) {
+      const { db, isMock: isFirebaseMock } = await initFirebase();
+      if (!isMockAuth && !isFirebaseMock && db) {
         // Fetch from Firestore
         const q = query(collection(db, 'user_profiles'));
         const querySnapshot = await getDocs(q);

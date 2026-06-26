@@ -236,9 +236,14 @@ async function startServer() {
   wss = new WebSocketServer({ noServer: true });
 
   httpServer.on('upgrade', (request, socket, head) => {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
-    });
+    const url = request.url ? new URL(request.url, `http://${request.headers.host || 'localhost'}`) : null;
+    const pathname = url ? url.pathname : '';
+    
+    if (pathname === '/api/ws') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    }
   });
 
   wss.on('connection', (ws: WebSocket) => {

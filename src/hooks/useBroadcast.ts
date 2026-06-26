@@ -334,7 +334,7 @@ export function useBroadcast() {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}`;
+    const wsUrl = `${protocol}//${window.location.host}/api/ws`;
     
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;

@@ -18,6 +18,8 @@ export interface UserProfile {
   fpsMode: '30' | '60';
   audioCues: boolean;
   setupCompleted: boolean;
+  email?: string;
+  photoURL?: string;
 }
 
 export interface AuthUser {
@@ -75,26 +77,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const docRef = doc(db, 'user_profiles', firebaseUser.uid);
               const docSnap = await getDoc(docRef);
               if (docSnap.exists()) {
-                setUserProfile(docSnap.data() as UserProfile);
+                const existingData = docSnap.data();
+                // If existing profile is missing email or photoURL or they have changed, let's update it in Firestore!
+                if (!existingData.email || !existingData.photoURL || existingData.email !== firebaseUser.email || existingData.photoURL !== firebaseUser.photoURL) {
+                  const updatedProfile = {
+                    ...existingData,
+                    email: firebaseUser.email || existingData.email || '',
+                    photoURL: firebaseUser.photoURL || existingData.photoURL || '',
+                  };
+                  await setDoc(docRef, updatedProfile, { merge: true });
+                  setUserProfile(updatedProfile as UserProfile);
+                } else {
+                  setUserProfile(existingData as UserProfile);
+                }
               } else {
-                setUserProfile({
-                  displayName: firebaseUser.displayName || '',
-                  role: '',
-                  favoriteSport: '',
+                // Auto-create initial profile on first login so they are immediately registered and visible
+                const initialProfile: UserProfile = {
+                  displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Operator',
+                  role: 'Main Commentator',
+                  favoriteSport: 'Other / General',
                   fpsMode: '60',
                   audioCues: true,
-                  setupCompleted: false,
-                });
+                  setupCompleted: true, // Mark completed so they skip blocking setups and register immediately
+                  email: firebaseUser.email || '',
+                  photoURL: firebaseUser.photoURL || '',
+                };
+                await setDoc(docRef, initialProfile);
+                setUserProfile(initialProfile);
+                console.log('Automatically created initial Firebase profile on login:', initialProfile);
               }
             } catch (err) {
               console.error('Failed to load user profile from Firestore:', err);
               setUserProfile({
                 displayName: firebaseUser.displayName || '',
-                role: '',
-                favoriteSport: '',
+                role: 'Main Commentator',
+                favoriteSport: 'Other / General',
                 fpsMode: '60',
                 audioCues: true,
-                setupCompleted: false,
+                setupCompleted: true,
+                email: firebaseUser.email || '',
+                photoURL: firebaseUser.photoURL || '',
               });
             } finally {
               setProfileLoading(false);
@@ -118,14 +140,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (savedProfile) {
               setUserProfile(JSON.parse(savedProfile));
             } else {
-              setUserProfile({
+              const initialMockProfile: UserProfile = {
                 displayName: parsedUser.displayName || 'Guest Streamer',
-                role: '',
-                favoriteSport: '',
+                role: 'Main Commentator',
+                favoriteSport: 'Esports',
                 fpsMode: '60',
                 audioCues: true,
-                setupCompleted: false,
-              });
+                setupCompleted: true,
+                email: parsedUser.email || '',
+                photoURL: parsedUser.photoURL || '',
+              };
+              localStorage.setItem(`zraff_mock_profile_${parsedUser.uid}`, JSON.stringify(initialMockProfile));
+              setUserProfile(initialMockProfile);
             }
           }
         } catch (e) {
@@ -168,14 +194,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (savedProfile) {
         setUserProfile(JSON.parse(savedProfile));
       } else {
-        setUserProfile({
+        const initialMockProfile: UserProfile = {
           displayName: mockUser.displayName || 'Guest Streamer',
-          role: '',
-          favoriteSport: '',
+          role: 'Main Commentator',
+          favoriteSport: 'Esports',
           fpsMode: '60',
           audioCues: true,
-          setupCompleted: false,
-        });
+          setupCompleted: true,
+          email: mockUser.email || '',
+          photoURL: mockUser.photoURL || '',
+        };
+        localStorage.setItem(`zraff_mock_profile_${mockUser.uid}`, JSON.stringify(initialMockProfile));
+        setUserProfile(initialMockProfile);
       }
       setLoading(false);
     }
@@ -204,6 +234,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updatedProfile: UserProfile = {
       ...profileData,
       setupCompleted: true,
+      email: user.email || undefined,
+      photoURL: user.photoURL || undefined,
     };
 
     if (!isMockAuth && firebaseAuthInstance && firestoreInstance) {
