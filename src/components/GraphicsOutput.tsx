@@ -154,6 +154,20 @@ export default function GraphicsOutput() {
                 <span className="font-sans font-extrabold text-sm tracking-wide text-white uppercase w-12 text-center">
                   {state.settings.homeTeam.substring(0, 3).toUpperCase()}
                 </span>
+
+                {/* Yellow/Red Cards indicators */}
+                <div className="flex flex-col gap-0.5 justify-center items-center shrink-0">
+                  {state.stats.yellowCardsHome > 0 && (
+                    <div className="flex items-center justify-center bg-yellow-400 text-slate-950 font-mono font-black text-[8px] w-2.5 h-3.5 rounded-sm shadow-sm" title={`${state.stats.yellowCardsHome} Yellow Card(s)`}>
+                      {state.stats.yellowCardsHome > 1 ? state.stats.yellowCardsHome : ''}
+                    </div>
+                  )}
+                  {state.stats.redCardsHome > 0 && (
+                    <div className="flex items-center justify-center bg-red-600 text-white font-mono font-black text-[8px] w-2.5 h-3.5 rounded-sm shadow-sm animate-pulse" title={`${state.stats.redCardsHome} Red Card(s)`}>
+                      {state.stats.redCardsHome > 1 ? state.stats.redCardsHome : ''}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -185,6 +199,20 @@ export default function GraphicsOutput() {
             {/* Away Team */}
             {!state.hideScoreboard && (
               <div className="flex items-center gap-3 px-4 h-14">
+                {/* Yellow/Red Cards indicators */}
+                <div className="flex flex-col gap-0.5 justify-center items-center shrink-0">
+                  {state.stats.yellowCardsAway > 0 && (
+                    <div className="flex items-center justify-center bg-yellow-400 text-slate-950 font-mono font-black text-[8px] w-2.5 h-3.5 rounded-sm shadow-sm" title={`${state.stats.yellowCardsAway} Yellow Card(s)`}>
+                      {state.stats.yellowCardsAway > 1 ? state.stats.yellowCardsAway : ''}
+                    </div>
+                  )}
+                  {state.stats.redCardsAway > 0 && (
+                    <div className="flex items-center justify-center bg-red-600 text-white font-mono font-black text-[8px] w-2.5 h-3.5 rounded-sm shadow-sm animate-pulse" title={`${state.stats.redCardsAway} Red Card(s)`}>
+                      {state.stats.redCardsAway > 1 ? state.stats.redCardsAway : ''}
+                    </div>
+                  )}
+                </div>
+
                 <span className="font-sans font-extrabold text-sm tracking-wide text-white uppercase w-12 text-center">
                   {state.settings.awayTeam.substring(0, 3).toUpperCase()}
                 </span>
@@ -308,6 +336,22 @@ export default function GraphicsOutput() {
                   <span className="font-mono font-black text-sm tracking-widest text-slate-100 uppercase">
                     {state.settings.homeTeam.substring(0, 3).toUpperCase()}
                   </span>
+
+                  {/* Yellow/Red Cards indicators */}
+                  {(state.stats.yellowCardsHome > 0 || state.stats.redCardsHome > 0) && (
+                    <div className="flex gap-1 shrink-0 ml-1">
+                      {state.stats.yellowCardsHome > 0 && (
+                        <div className="flex items-center justify-center bg-yellow-400 text-slate-950 font-mono font-black text-[8px] w-2 h-3 rounded-sm shadow-sm">
+                          {state.stats.yellowCardsHome > 1 ? state.stats.yellowCardsHome : ''}
+                        </div>
+                      )}
+                      {state.stats.redCardsHome > 0 && (
+                        <div className="flex items-center justify-center bg-red-600 text-white font-mono font-black text-[8px] w-2 h-3 rounded-sm shadow-sm animate-pulse">
+                          {state.stats.redCardsHome > 1 ? state.stats.redCardsHome : ''}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -349,6 +393,22 @@ export default function GraphicsOutput() {
               {/* Away Team Tab */}
               {!state.hideScoreboard && (
                 <div className="flex items-center gap-2.5 px-4 h-full border-r border-slate-800/80">
+                  {/* Yellow/Red Cards indicators */}
+                  {(state.stats.yellowCardsAway > 0 || state.stats.redCardsAway > 0) && (
+                    <div className="flex gap-1 shrink-0 mr-1">
+                      {state.stats.yellowCardsAway > 0 && (
+                        <div className="flex items-center justify-center bg-yellow-400 text-slate-950 font-mono font-black text-[8px] w-2 h-3 rounded-sm shadow-sm">
+                          {state.stats.yellowCardsAway > 1 ? state.stats.yellowCardsAway : ''}
+                        </div>
+                      )}
+                      {state.stats.redCardsAway > 0 && (
+                        <div className="flex items-center justify-center bg-red-600 text-white font-mono font-black text-[8px] w-2 h-3 rounded-sm shadow-sm animate-pulse">
+                          {state.stats.redCardsAway > 1 ? state.stats.redCardsAway : ''}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <span className="font-mono font-black text-sm tracking-widest text-slate-100 uppercase">
                     {state.settings.awayTeam.substring(0, 3).toUpperCase()}
                   </span>
@@ -474,10 +534,11 @@ export default function GraphicsOutput() {
       <AnimatePresence>
         {state.activeCard && (
           <motion.div 
+            key="card-popup"
             initial={{ opacity: 0, x: 200 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 200 }}
-            className="absolute bottom-16 right-8 pointer-events-none"
+            className="absolute bottom-16 right-8 pointer-events-none z-50"
             id="obs-card-popup"
           >
             <div className="flex bg-slate-950/95 border border-slate-800 rounded-2xl p-4 shadow-2xl shadow-black/90 w-80 items-center gap-4 relative overflow-hidden">
@@ -686,10 +747,11 @@ export default function GraphicsOutput() {
       <AnimatePresence>
         {state.activeSubstitution && (
           <motion.div 
+            key="substitution-popup"
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
-            className="absolute bottom-16 left-8 pointer-events-none"
+            className="absolute bottom-16 left-8 pointer-events-none z-50"
             id="obs-sub-popup"
           >
             <div className="bg-slate-950/95 border-2 border-emerald-500 rounded-2xl overflow-hidden shadow-2xl shadow-black/90 w-96">

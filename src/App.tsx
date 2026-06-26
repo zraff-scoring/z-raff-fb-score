@@ -138,7 +138,14 @@ function AppContent() {
   }
 
   // Fully enter workspace directly
-  return <ControlPanel />;
+  return (
+    <ControlPanel 
+      onLock={() => {
+        localStorage.removeItem('zraff_app_unlocked');
+        setIsUnlocked(false);
+      }} 
+    />
+  );
 }
 
 export default function App() {

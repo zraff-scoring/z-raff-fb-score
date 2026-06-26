@@ -74,15 +74,33 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
   };
 
   const triggerCardPopup = () => {
-    updateState((prev) => ({
-      ...prev,
-      activeCard: {
-        team: cardTeam,
-        player: cardPlayer || 'Unidentified Player',
-        cardType,
-        minute: cardMinute,
+    updateState((prev) => {
+      const nextStats = { ...prev.stats };
+      if (cardType === 'yellow') {
+        if (cardTeam === 'home') {
+          nextStats.yellowCardsHome = (nextStats.yellowCardsHome || 0) + 1;
+        } else {
+          nextStats.yellowCardsAway = (nextStats.yellowCardsAway || 0) + 1;
+        }
+      } else {
+        if (cardTeam === 'home') {
+          nextStats.redCardsHome = (nextStats.redCardsHome || 0) + 1;
+        } else {
+          nextStats.redCardsAway = (nextStats.redCardsAway || 0) + 1;
+        }
       }
-    }));
+
+      return {
+        ...prev,
+        stats: nextStats,
+        activeCard: {
+          team: cardTeam,
+          player: cardPlayer || 'Unidentified Player',
+          cardType,
+          minute: cardMinute,
+        }
+      };
+    });
 
     setTimeout(() => {
       updateState((prev) => ({ ...prev, activeCard: null }));
@@ -323,6 +341,82 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
                 <div className="flex gap-1">
                   <button onClick={() => adjustStat('xGAway', Math.max(0, state.stats.xGAway - 0.1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
                   <button onClick={() => adjustStat('xGAway', state.stats.xGAway + 0.1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Corners */}
+            <div className="grid grid-cols-3 items-center gap-2">
+              <span className="text-xs font-bold text-slate-300 uppercase font-mono">Corners</span>
+              <div className="flex items-center justify-between gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-xs font-mono font-bold text-white">{state.stats.cornersHome}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => adjustStat('cornersHome', Math.max(0, state.stats.cornersHome - 1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
+                  <button onClick={() => adjustStat('cornersHome', state.stats.cornersHome + 1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-xs font-mono font-bold text-white">{state.stats.cornersAway}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => adjustStat('cornersAway', Math.max(0, state.stats.cornersAway - 1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
+                  <button onClick={() => adjustStat('cornersAway', state.stats.cornersAway + 1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Fouls */}
+            <div className="grid grid-cols-3 items-center gap-2">
+              <span className="text-xs font-bold text-slate-300 uppercase font-mono">Fouls</span>
+              <div className="flex items-center justify-between gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-xs font-mono font-bold text-white">{state.stats.foulsHome}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => adjustStat('foulsHome', Math.max(0, state.stats.foulsHome - 1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
+                  <button onClick={() => adjustStat('foulsHome', state.stats.foulsHome + 1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-xs font-mono font-bold text-white">{state.stats.foulsAway}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => adjustStat('foulsAway', Math.max(0, state.stats.foulsAway - 1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
+                  <button onClick={() => adjustStat('foulsAway', state.stats.foulsAway + 1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Yellow Cards */}
+            <div className="grid grid-cols-3 items-center gap-2">
+              <span className="text-xs font-bold text-slate-300 uppercase font-mono">Yellow Cards</span>
+              <div className="flex items-center justify-between gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-xs font-mono font-bold text-white">{state.stats.yellowCardsHome}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => adjustStat('yellowCardsHome', Math.max(0, state.stats.yellowCardsHome - 1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
+                  <button onClick={() => adjustStat('yellowCardsHome', state.stats.yellowCardsHome + 1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-xs font-mono font-bold text-white">{state.stats.yellowCardsAway}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => adjustStat('yellowCardsAway', Math.max(0, state.stats.yellowCardsAway - 1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
+                  <button onClick={() => adjustStat('yellowCardsAway', state.stats.yellowCardsAway + 1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Red Cards */}
+            <div className="grid grid-cols-3 items-center gap-2">
+              <span className="text-xs font-bold text-slate-300 uppercase font-mono">Red Cards</span>
+              <div className="flex items-center justify-between gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-xs font-mono font-bold text-white">{state.stats.redCardsHome}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => adjustStat('redCardsHome', Math.max(0, state.stats.redCardsHome - 1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
+                  <button onClick={() => adjustStat('redCardsHome', state.stats.redCardsHome + 1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                <span className="text-xs font-mono font-bold text-white">{state.stats.redCardsAway}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => adjustStat('redCardsAway', Math.max(0, state.stats.redCardsAway - 1))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">-</button>
+                  <button onClick={() => adjustStat('redCardsAway', state.stats.redCardsAway + 1)} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs text-white hover:bg-slate-700 cursor-pointer">+</button>
                 </div>
               </div>
             </div>

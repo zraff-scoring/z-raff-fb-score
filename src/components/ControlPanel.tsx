@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Activity, Settings, EyeOff, Layout, Cast, HelpCircle, Trophy, Users, Copy, ExternalLink, Tv,
-  Cloud, CloudOff, RefreshCw, Sliders, User
+  Cloud, CloudOff, RefreshCw, Sliders, User, Lock
 } from 'lucide-react';
 import { useBroadcast, DEFAULT_STATE } from '../hooks/useBroadcast.js';
 import { useAuth } from '../contexts/AuthContext.js';
@@ -17,7 +17,11 @@ import UsersCategory from './UsersCategory.js';
 
 type CategoryType = 'match' | 'scoreboard' | 'timer' | 'lineups' | 'overlays' | 'users';
 
-export default function ControlPanel() {
+interface ControlPanelProps {
+  onLock?: () => void;
+}
+
+export default function ControlPanel({ onLock }: ControlPanelProps) {
   const { user, userProfile, logout } = useAuth();
   const { 
     state, 
@@ -140,6 +144,16 @@ export default function ControlPanel() {
               >
                 <Sliders className="w-3.5 h-3.5" />
               </button>
+
+              {onLock && (
+                <button
+                  onClick={onLock}
+                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer border border-transparent hover:border-red-500/10"
+                  title="Lock Console"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           )}
 
