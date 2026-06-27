@@ -330,58 +330,87 @@ export function useBroadcast() {
   // Connect to live WebSocket if available
   const connect = useCallback(() => {
     if (socketRef.current) {
-      socketRef.current.close();
+      try {
+        socketRef.current.onclose = null;
+        socketRef.current.onerror = null;
+        socketRef.current.close();
+      } catch (e) {
+        // Ignore
+      }
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/api/ws`;
     
-    const socket = new WebSocket(wsUrl);
-    socketRef.current = socket;
+    try {
+      const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
 
-    socket.onopen = () => {
-      setIsWsConnected(true);
+      socket.onopen = () => {
+        setIsWsConnected(true);
+        if (reconnectTimeoutRef.current) {
+          window.clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'STATE_UPDATE' && data.state) {
+            setAndPersistState(data.state);
+            if (data.state && !data.state.activeReplay) {
+              const endReplayEvent = new CustomEvent('broadcast-replay-end');
+              window.dispatchEvent(endReplayEvent);
+            }
+          } else if (data.type === 'TRIGGER_REPLAY') {
+            const replayEvent = new CustomEvent('broadcast-replay');
+            window.dispatchEvent(replayEvent);
+          }
+        } catch (err) {
+          // Ignore
+        }
+      };
+
+      socket.onclose = () => {
+        setIsWsConnected(false);
+        if (reconnectTimeoutRef.current) {
+          window.clearTimeout(reconnectTimeoutRef.current);
+        }
+        reconnectTimeoutRef.current = window.setTimeout(() => {
+          connect();
+        }, 4000);
+      };
+
+      socket.onerror = () => {
+        try {
+          socket.close();
+        } catch (e) {
+          // Ignore
+        }
+      };
+    } catch (e) {
+      setIsWsConnected(false);
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
       }
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'STATE_UPDATE' && data.state) {
-          setAndPersistState(data.state);
-          if (data.state && !data.state.activeReplay) {
-            const endReplayEvent = new CustomEvent('broadcast-replay-end');
-            window.dispatchEvent(endReplayEvent);
-          }
-        } else if (data.type === 'TRIGGER_REPLAY') {
-          const replayEvent = new CustomEvent('broadcast-replay');
-          window.dispatchEvent(replayEvent);
-        }
-      } catch (err) {
-        // Ignore
-      }
-    };
-
-    socket.onclose = () => {
-      setIsWsConnected(false);
       reconnectTimeoutRef.current = window.setTimeout(() => {
         connect();
-      }, 3000);
-    };
-
-    socket.onerror = () => {
-      socket.close();
-    };
+      }, 4000);
+    }
   }, [setAndPersistState]);
 
   useEffect(() => {
     connect();
     return () => {
       if (socketRef.current) {
-        socketRef.current.close();
+        try {
+          socketRef.current.onclose = null;
+          socketRef.current.onerror = null;
+          socketRef.current.close();
+        } catch (e) {
+          // Ignore
+        }
       }
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);

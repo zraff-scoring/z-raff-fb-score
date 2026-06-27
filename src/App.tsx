@@ -149,6 +149,43 @@ function AppContent() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      if (reason) {
+        const msg = String(reason.message || reason);
+        if (
+          msg.includes('WebSocket') || 
+          msg.includes('websocket') || 
+          msg.includes('ws:') || 
+          msg.includes('closed without opened')
+        ) {
+          event.preventDefault();
+        }
+      }
+    };
+
+    const handleGlobalError = (event: ErrorEvent) => {
+      const msg = String(event.message || event.error);
+      if (
+        msg.includes('WebSocket') || 
+        msg.includes('websocket') || 
+        msg.includes('ws:') || 
+        msg.includes('closed without opened')
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleGlobalError);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleGlobalError);
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <AppContent />

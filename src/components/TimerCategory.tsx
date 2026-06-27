@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 import { BroadcastState, TimerPeriod } from '../types.js';
 
@@ -7,6 +8,28 @@ interface TimerCategoryProps {
 }
 
 export default function TimerCategory({ state, updateState }: TimerCategoryProps) {
+  const [inputMinutes, setInputMinutes] = useState('');
+  const [inputSeconds, setInputSeconds] = useState('');
+
+  const handleApplyManualTime = () => {
+    const mins = parseInt(inputMinutes);
+    const secs = parseInt(inputSeconds);
+    
+    // Fall back to current value if input is empty
+    const finalMins = isNaN(mins) ? Math.floor(state.timer.timeSeconds / 60) : Math.max(0, mins);
+    const finalSecs = isNaN(secs) ? state.timer.timeSeconds % 60 : Math.min(59, Math.max(0, secs));
+    
+    const totalSeconds = (finalMins * 60) + finalSecs;
+    
+    updateState((prev) => ({
+      ...prev,
+      timer: { ...prev.timer, timeSeconds: totalSeconds }
+    }));
+    
+    setInputMinutes('');
+    setInputSeconds('');
+  };
+
   // Timer running state toggle
   const setTimerRunning = (isRunning: boolean) => {
     updateState((prev) => ({
@@ -133,6 +156,52 @@ export default function TimerCategory({ state, updateState }: TimerCategoryProps
               id="btn-clock-plus-1m"
             >
               +1 MINUTE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* MANUAL CLOCK ADJUSTMENT ENTRY */}
+      <div className="border-t border-slate-800 pb-5 pt-4">
+        <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex flex-col sm:flex-row items-center gap-4 justify-between w-full">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-blue-400 font-black mb-1">
+              Manual Edit Match Timer
+            </span>
+            <span className="text-xs text-slate-500">
+              Type the exact minutes and seconds to adjust the live match clock.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1.5 px-3">
+              <input 
+                type="number" 
+                placeholder={Math.floor(state.timer.timeSeconds / 60).toString()}
+                value={inputMinutes}
+                onChange={(e) => setInputMinutes(e.target.value)}
+                className="w-14 bg-transparent border-none text-white text-sm font-bold font-mono focus:outline-none text-center"
+                min="0"
+                max="180"
+                id="input-timer-mins"
+              />
+              <span className="text-slate-500 font-bold">:</span>
+              <input 
+                type="number" 
+                placeholder={(state.timer.timeSeconds % 60).toString().padStart(2, '0')}
+                value={inputSeconds}
+                onChange={(e) => setInputSeconds(e.target.value)}
+                className="w-10 bg-transparent border-none text-white text-sm font-bold font-mono focus:outline-none text-center"
+                min="0"
+                max="59"
+                id="input-timer-secs"
+              />
+            </div>
+            <button 
+              onClick={handleApplyManualTime}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer uppercase tracking-wider h-[38px] flex items-center justify-center shrink-0"
+              id="btn-apply-manual-time"
+            >
+              Set Time
             </button>
           </div>
         </div>

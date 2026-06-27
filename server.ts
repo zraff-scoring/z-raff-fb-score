@@ -235,6 +235,7 @@ async function startServer() {
     });
   });
 
+  let viteInstance: any = null;
   const httpServer = createHttpServer(app);
 
   // Initialize WebSockets
@@ -248,6 +249,12 @@ async function startServer() {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
+    } else {
+      if (viteInstance && viteInstance.ws) {
+        viteInstance.ws.handleUpgrade(request, socket, head);
+      } else {
+        socket.destroy();
+      }
     }
   });
 
@@ -305,6 +312,7 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: 'spa',
     });
+    viteInstance = vite;
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');

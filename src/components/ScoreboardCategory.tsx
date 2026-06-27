@@ -40,6 +40,9 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
 
   // Trigger goal popup (and optionally auto increment score)
   const triggerGoalPopup = () => {
+    // Automatically calculate the current match minute from the live timer
+    const calculatedMinute = Math.floor(state.timer.timeSeconds / 60) + 1;
+
     updateState((prev) => {
       const nextScore = autoIncrementScore 
         ? (goalTeam === 'home' ? prev.scoreboard.homeScore + 1 : prev.scoreboard.awayScore + 1)
@@ -59,7 +62,7 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
           team: goalTeam,
           scorer: goalScorer || 'Unidentified Scorer',
           assist: goalAssist || '',
-          minute: goalMinute,
+          minute: calculatedMinute,
           goalNumber,
         }
       };
@@ -498,16 +501,11 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
             {/* Goal minute and sequence */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="flex flex-col">
-                <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Match Minute</label>
-                <input 
-                  type="number" 
-                  value={goalMinute}
-                  onChange={(e) => setGoalMinute(parseInt(e.target.value) || 0)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white font-mono"
-                  min="1"
-                  max="120"
-                  id="goal-minute"
-                />
+                <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Match Minute (Auto-Counted)</label>
+                <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono flex justify-between items-center h-[38px]">
+                  <span className="font-bold text-amber-400">{Math.floor(state.timer.timeSeconds / 60) + 1}'</span>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">LIVE TIME</span>
+                </div>
               </div>
               <div className="flex flex-col">
                 <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Scorer's Season Goal Count</label>
