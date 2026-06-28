@@ -56,8 +56,8 @@ const initialBroadcastState: BroadcastState = {
   settings: {
     homeTeam: 'London Red',
     awayTeam: 'London Blue',
-    homeLogo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=120&auto=format&fit=crop&q=60',
-    awayLogo: 'https://images.unsplash.com/photo-1540747737956-37872a7e937a?w=120&auto=format&fit=crop&q=60',
+    homeLogo: '',
+    awayLogo: '',
     leagueName: 'Z-raff Premier Trophy',
     location: 'Emirates Arena, London',
     referee: 'Michael Oliver',
@@ -87,7 +87,7 @@ const initialBroadcastState: BroadcastState = {
     activeLineupView: null,
   },
   stats: {
-    possessionHome: 50,
+    possessionHome: 0,
     shotsHome: 0,
     shotsAway: 0,
     shotsOnTargetHome: 0,

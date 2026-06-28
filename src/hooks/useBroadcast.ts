@@ -61,8 +61,8 @@ export const DEFAULT_STATE: BroadcastState = {
   settings: {
     homeTeam: 'London Red',
     awayTeam: 'London Blue',
-    homeLogo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=120&auto=format&fit=crop&q=60',
-    awayLogo: 'https://images.unsplash.com/photo-1540747737956-37872a7e937a?w=120&auto=format&fit=crop&q=60',
+    homeLogo: '',
+    awayLogo: '',
     leagueName: 'Z-raff Premier Trophy',
     location: 'Emirates Arena, London',
     referee: 'Michael Oliver',
@@ -92,7 +92,7 @@ export const DEFAULT_STATE: BroadcastState = {
     activeLineupView: null,
   },
   stats: {
-    possessionHome: 50,
+    possessionHome: 0,
     shotsHome: 0,
     shotsAway: 0,
     shotsOnTargetHome: 0,
@@ -728,13 +728,21 @@ export function useBroadcast() {
   }, [syncKey, cloudSyncEnabled, setAndPersistState]);
 
   const updateState = useCallback((updater: BroadcastState | ((prev: BroadcastState) => BroadcastState)) => {
+    let nextState: BroadcastState | null = null;
     setState((prev) => {
       const rawNext = typeof updater === 'function' ? updater(prev) : updater;
-      const nextState = { ...rawNext, updatedAt: Date.now() };
-      
+      nextState = { ...rawNext, updatedAt: Date.now() };
+      return nextState;
+    });
+
+    // Run communication side-effects outside of the setState callback
+    setTimeout(() => {
+      if (!nextState) return;
+      const stateToSync = nextState as BroadcastState;
+
       // 1. Save to LocalStorage for offline persistence
       try {
-        localStorage.setItem('broadcast_state', JSON.stringify(nextState));
+        localStorage.setItem('broadcast_state', JSON.stringify(stateToSync));
       } catch (e) {
         // Ignore
       }
@@ -742,7 +750,7 @@ export function useBroadcast() {
       // 2. Broadcast via BroadcastChannel to other local tabs
       if (typeof window !== 'undefined') {
         const channel = new BroadcastChannel('broadcast_state_sync');
-        channel.postMessage({ type: 'STATE_UPDATE', state: nextState });
+        channel.postMessage({ type: 'STATE_UPDATE', state: stateToSync });
         channel.close();
       }
 
@@ -750,7 +758,7 @@ export function useBroadcast() {
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
         socketRef.current.send(JSON.stringify({
           type: 'UPDATE_STATE',
-          state: nextState,
+          state: stateToSync,
         }));
       } else {
         // REST API backup sync
@@ -759,7 +767,7 @@ export function useBroadcast() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(nextState),
+          body: JSON.stringify(stateToSync),
         }).catch(() => {
           // Silent catch
         });
@@ -769,12 +777,10 @@ export function useBroadcast() {
       if (cloudSyncEnabled) {
         publishToCloud({
           type: 'STATE_UPDATE',
-          state: nextState,
+          state: stateToSync,
         });
       }
-
-      return nextState;
-    });
+    }, 0);
   }, [cloudSyncEnabled, publishToCloud]);
 
   const triggerReplay = useCallback(() => {
@@ -803,39 +809,35 @@ export function useBroadcast() {
   }, [cloudSyncEnabled, publishToCloud]);
 
   const clearOverlays = useCallback(() => {
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: 'CLEAR_OVERLAYS' }));
-    } else {
-      updateState((prev) => ({
-        ...prev,
-        activeSubstitution: null,
-        activeGoal: null,
-        activeCard: null,
-        activeVAR: null,
-        activeLowerThird: null,
-        activeSocial: null,
-        activeReplay: false,
-        hideScoreboard: false,
-        hideTimer: false,
-        stats: {
-          ...prev.stats,
-          activeStatsView: false,
-        },
-        lineups: {
-          ...prev.lineups,
-          activeLineupView: null,
-        },
-        penaltyShootout: {
-          ...prev.penaltyShootout,
-          active: false,
-        },
-        activeSponsor: {
-          ...prev.activeSponsor,
-          type: null,
-        },
-        activeWinnerAnnounce: null
-      }));
-    }
+    updateState((prev) => ({
+      ...prev,
+      activeSubstitution: null,
+      activeGoal: null,
+      activeCard: null,
+      activeVAR: null,
+      activeLowerThird: null,
+      activeSocial: null,
+      activeReplay: false,
+      hideScoreboard: false,
+      hideTimer: false,
+      stats: {
+        ...prev.stats,
+        activeStatsView: false,
+      },
+      lineups: {
+        ...prev.lineups,
+        activeLineupView: null,
+      },
+      penaltyShootout: {
+        ...prev.penaltyShootout,
+        active: false,
+      },
+      activeSponsor: {
+        ...prev.activeSponsor,
+        type: null,
+      },
+      activeWinnerAnnounce: null
+    }));
   }, [updateState]);
 
   return {
