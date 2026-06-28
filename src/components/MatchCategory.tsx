@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Settings, ShieldAlert, RotateCcw, EyeOff, Upload } from 'lucide-react';
+import { Settings, ShieldAlert, RotateCcw, EyeOff } from 'lucide-react';
 import { BroadcastState } from '../types.js';
-import { compressAndEncodeImage } from '../utils/imageHelper.js';
 
 interface MatchCategoryProps {
   state: BroadcastState;
@@ -101,70 +100,30 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
           </div>
 
           <div className="flex flex-col">
-            <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Home Logo (Emoji, URL or Upload)</label>
+            <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Home Logo (Direct Image Link)</label>
             <div className="flex gap-2">
               <input 
                 type="text" 
                 value={homeLogo}
                 onChange={(e) => setHomeLogo(e.target.value)}
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
-                placeholder="e.g. 🔴 or URL"
+                placeholder="e.g. https://domain.com/logo.png"
                 id="match-input-homeLogo"
               />
-              <label className="flex items-center justify-center gap-1 px-4 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-colors border border-slate-700 shrink-0">
-                <Upload className="w-3.5 h-3.5 text-blue-400" />
-                <span>Upload</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const base64 = await compressAndEncodeImage(file);
-                        setHomeLogo(base64);
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : 'Upload failed');
-                      }
-                    }
-                  }}
-                />
-              </label>
             </div>
           </div>
 
           <div className="flex flex-col">
-            <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Away Logo (Emoji, URL or Upload)</label>
+            <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Away Logo (Direct Image Link)</label>
             <div className="flex gap-2">
               <input 
                 type="text" 
                 value={awayLogo}
                 onChange={(e) => setAwayLogo(e.target.value)}
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
-                placeholder="e.g. 🔵 or URL"
+                placeholder="e.g. https://domain.com/logo.png"
                 id="match-input-awayLogo"
               />
-              <label className="flex items-center justify-center gap-1 px-4 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-colors border border-slate-700 shrink-0">
-                <Upload className="w-3.5 h-3.5 text-blue-400" />
-                <span>Upload</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const base64 = await compressAndEncodeImage(file);
-                        setAwayLogo(base64);
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : 'Upload failed');
-                      }
-                    }
-                  }}
-                />
-              </label>
             </div>
           </div>
 
@@ -217,36 +176,16 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
           </div>
 
           <div className="flex flex-col col-span-1 md:col-span-2">
-            <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Competition Logo / Emblem (Emoji, URL or Upload)</label>
+            <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Competition Logo / Emblem (Direct Image Link)</label>
             <div className="flex gap-2">
               <input 
                 type="text" 
                 value={competitionLogo}
                 onChange={(e) => setCompetitionLogo(e.target.value)}
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
-                placeholder="e.g. 🏆 or URL"
+                placeholder="e.g. https://domain.com/logo.png"
                 id="match-input-compLogo"
               />
-              <label className="flex items-center justify-center gap-1 px-4 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-colors border border-slate-700 shrink-0">
-                <Upload className="w-3.5 h-3.5 text-blue-400" />
-                <span>Upload Logo</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const base64 = await compressAndEncodeImage(file);
-                        setCompetitionLogo(base64);
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : 'Upload failed');
-                      }
-                    }
-                  }}
-                />
-              </label>
             </div>
           </div>
 

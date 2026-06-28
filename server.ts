@@ -183,19 +183,26 @@ async function startServer() {
   });
 
   app.post('/api/state', (req, res) => {
-    currentState = { ...currentState, ...req.body };
-    
-    // Manage timer interval based on running status
-    if (currentState.timer.isRunning) {
-      startTimerInterval();
-    } else {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
+    const nextState = { ...currentState, ...req.body };
+    if (!nextState.updatedAt) {
+      nextState.updatedAt = Date.now();
     }
     
-    broadcast({ type: 'STATE_UPDATE', state: currentState });
+    if (!currentState.updatedAt || nextState.updatedAt >= currentState.updatedAt) {
+      currentState = nextState;
+      
+      // Manage timer interval based on running status
+      if (currentState.timer.isRunning) {
+        startTimerInterval();
+      } else {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+      
+      broadcast({ type: 'STATE_UPDATE', state: currentState });
+    }
     res.json({ success: true, state: currentState });
   });
 
@@ -266,20 +273,27 @@ async function startServer() {
       try {
         const event = JSON.parse(message);
         
-        if (event.type === 'UPDATE_STATE') {
-          currentState = event.state;
-          
-          // Sync timer status
-          if (currentState.timer.isRunning) {
-            startTimerInterval();
-          } else {
-            if (timerInterval) {
-              clearInterval(timerInterval);
-              timerInterval = null;
-            }
+        if (event.type === 'UPDATE_STATE' && event.state) {
+          const nextState = event.state;
+          if (!nextState.updatedAt) {
+            nextState.updatedAt = Date.now();
           }
           
-          broadcast({ type: 'STATE_UPDATE', state: currentState });
+          if (!currentState.updatedAt || nextState.updatedAt >= currentState.updatedAt) {
+            currentState = nextState;
+            
+            // Sync timer status
+            if (currentState.timer.isRunning) {
+              startTimerInterval();
+            } else {
+              if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+              }
+            }
+            
+            broadcast({ type: 'STATE_UPDATE', state: currentState });
+          }
         } else if (event.type === 'TRIGGER_REPLAY') {
           broadcast({ type: 'TRIGGER_REPLAY' });
         } else if (event.type === 'CLEAR_OVERLAYS') {

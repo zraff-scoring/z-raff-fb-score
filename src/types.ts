@@ -146,6 +146,7 @@ export interface BroadcastState {
     winner: 'home' | 'away' | 'draw' | null;
     customTitle?: string;
   } | null;
+  updatedAt?: number;
 }
 
 // Socket communication protocol

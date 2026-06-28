@@ -217,12 +217,17 @@ export function useBroadcast() {
 
   // Sync state helper to both local state & local storage safely
   const setAndPersistState = useCallback((next: BroadcastState) => {
-    setState(next);
-    try {
-      localStorage.setItem('broadcast_state', JSON.stringify(next));
-    } catch (e) {
-      // Ignore
-    }
+    setState((prev) => {
+      if (prev && prev.updatedAt && next && next.updatedAt && next.updatedAt < prev.updatedAt) {
+        return prev;
+      }
+      try {
+        localStorage.setItem('broadcast_state', JSON.stringify(next));
+      } catch (e) {
+        // Ignore
+      }
+      return next;
+    });
   }, []);
 
   // Fetch initial state via REST API on load to override with live server values if running
@@ -358,7 +363,24 @@ export function useBroadcast() {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'STATE_UPDATE' && data.state) {
-            setAndPersistState(data.state);
+            const incomingState = data.state;
+            setState((prev) => {
+              if (prev && prev.updatedAt && incomingState && incomingState.updatedAt && incomingState.updatedAt < prev.updatedAt) {
+                // Server state is older than local state. Send newer local state back to server.
+                if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+                  socketRef.current.send(JSON.stringify({
+                    type: 'UPDATE_STATE',
+                    state: prev
+                  }));
+                }
+                return prev;
+              }
+              try {
+                localStorage.setItem('broadcast_state', JSON.stringify(incomingState));
+              } catch (e) {}
+              return incomingState;
+            });
+
             if (data.state && !data.state.activeReplay) {
               const endReplayEvent = new CustomEvent('broadcast-replay-end');
               window.dispatchEvent(endReplayEvent);
@@ -462,7 +484,24 @@ export function useBroadcast() {
         }
         const data = await res.json();
         if (data && typeof data === 'object' && data.settings) {
-          setAndPersistState(data);
+          const incomingState = data;
+          setState((prev) => {
+            if (prev && prev.updatedAt && incomingState && incomingState.updatedAt && incomingState.updatedAt < prev.updatedAt) {
+              // Server state is older than local state. POST newer local state back to server.
+              fetch('/api/state', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(prev),
+              }).catch(() => {});
+              return prev;
+            }
+            try {
+              localStorage.setItem('broadcast_state', JSON.stringify(incomingState));
+            } catch (e) {}
+            return incomingState;
+          });
           setIsRestConnected(true);
         }
       } catch (err) {
@@ -471,7 +510,7 @@ export function useBroadcast() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isWsConnected, setAndPersistState]);
+  }, [isWsConnected]);
 
   // Helper to publish updates to Firestore or fallback ntfy.sh Cloud Sync topic
   const publishToCloud = useCallback(async (payload: any) => {
@@ -684,7 +723,8 @@ export function useBroadcast() {
 
   const updateState = useCallback((updater: BroadcastState | ((prev: BroadcastState) => BroadcastState)) => {
     setState((prev) => {
-      const nextState = typeof updater === 'function' ? updater(prev) : updater;
+      const rawNext = typeof updater === 'function' ? updater(prev) : updater;
+      const nextState = { ...rawNext, updatedAt: Date.now() };
       
       // 1. Save to LocalStorage for offline persistence
       try {

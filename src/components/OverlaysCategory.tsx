@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Layout, Activity, EyeOff, Sparkles, Share2, CreditCard, ArrowLeftRight, Tv2, Video, Upload } from 'lucide-react';
+import { Layout, Activity, EyeOff, Sparkles, Share2, CreditCard, ArrowLeftRight, Tv2, Video } from 'lucide-react';
 import { BroadcastState, LowerThirdGraphic, VARGraphic } from '../types.js';
-import { compressAndEncodeImage } from '../utils/imageHelper.js';
 
 interface OverlaysCategoryProps {
   state: BroadcastState;
@@ -725,35 +724,16 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Logo (Emoji/URL or Upload)</label>
+                  <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Logo (Direct Image Link)</label>
                   <div className="flex gap-1.5">
                     <input 
                       type="text" 
-                      placeholder="e.g. ⭐ or URL" 
+                      placeholder="e.g. https://domain.com/logo.png" 
                       value={sponsorLogo}
                       onChange={(e) => setSponsorLogo(e.target.value)}
                       className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 text-white font-mono"
                       id="sponsor-logo"
                     />
-                    <label className="flex items-center justify-center bg-slate-800 hover:bg-slate-750 text-slate-200 p-1.5 rounded-xl cursor-pointer transition-colors border border-slate-700 shrink-0" title="Upload Sponsor Logo">
-                      <Upload className="w-3.5 h-3.5 text-blue-400" />
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            try {
-                              const base64 = await compressAndEncodeImage(file);
-                              setSponsorLogo(base64);
-                            } catch (err) {
-                              alert(err instanceof Error ? err.message : 'Upload failed');
-                            }
-                          }
-                        }}
-                      />
-                    </label>
                   </div>
                 </div>
                 <div className="flex flex-col">
