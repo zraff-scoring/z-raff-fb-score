@@ -340,7 +340,9 @@ export function useBroadcast() {
       try {
         socketRef.current.onclose = null;
         socketRef.current.onerror = null;
-        socketRef.current.close();
+        if (socketRef.current.readyState === WebSocket.OPEN || socketRef.current.readyState === WebSocket.CONNECTING) {
+          socketRef.current.close();
+        }
       } catch (e) {
         // Ignore
       }
@@ -408,7 +410,9 @@ export function useBroadcast() {
 
       socket.onerror = () => {
         try {
-          socket.close();
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.close();
+          }
         } catch (e) {
           // Ignore
         }
@@ -431,7 +435,9 @@ export function useBroadcast() {
         try {
           socketRef.current.onclose = null;
           socketRef.current.onerror = null;
-          socketRef.current.close();
+          if (socketRef.current.readyState === WebSocket.OPEN || socketRef.current.readyState === WebSocket.CONNECTING) {
+            socketRef.current.close();
+          }
         } catch (e) {
           // Ignore
         }

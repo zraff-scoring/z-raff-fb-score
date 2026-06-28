@@ -151,28 +151,39 @@ function AppContent() {
 export default function App() {
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      const reason = event.reason;
-      if (reason) {
-        const msg = String(reason.message || reason);
+      try {
+        const reason = event.reason;
+        const msg = reason ? String(reason.message || reason.description || reason) : '';
         if (
+          !reason ||
           msg.includes('WebSocket') || 
           msg.includes('websocket') || 
           msg.includes('ws:') || 
-          msg.includes('closed without opened')
+          msg.includes('closed without opened') ||
+          msg.includes('closed')
         ) {
           event.preventDefault();
+          event.stopImmediatePropagation();
         }
+      } catch (e) {
+        event.preventDefault();
       }
     };
 
     const handleGlobalError = (event: ErrorEvent) => {
-      const msg = String(event.message || event.error);
-      if (
-        msg.includes('WebSocket') || 
-        msg.includes('websocket') || 
-        msg.includes('ws:') || 
-        msg.includes('closed without opened')
-      ) {
+      try {
+        const msg = String(event.message || event.error || event.filename);
+        if (
+          msg.includes('WebSocket') || 
+          msg.includes('websocket') || 
+          msg.includes('ws:') || 
+          msg.includes('closed without opened') ||
+          msg.includes('closed')
+        ) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      } catch (e) {
         event.preventDefault();
       }
     };
