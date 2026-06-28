@@ -161,6 +161,8 @@ export function useBroadcast() {
   // Client ID to prevent self-update loops
   const clientId = useRef<string>(Math.random().toString(36).substring(2, 10));
 
+  const isController = typeof window !== 'undefined' && !window.location.pathname.includes('/output');
+
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -365,7 +367,7 @@ export function useBroadcast() {
           if (data.type === 'STATE_UPDATE' && data.state) {
             const incomingState = data.state;
             setState((prev) => {
-              if (prev && prev.updatedAt && incomingState && incomingState.updatedAt && incomingState.updatedAt < prev.updatedAt) {
+              if (isController && prev && prev.updatedAt && incomingState && incomingState.updatedAt && incomingState.updatedAt < prev.updatedAt) {
                 // Server state is older than local state. Send newer local state back to server.
                 if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
                   socketRef.current.send(JSON.stringify({
@@ -420,7 +422,7 @@ export function useBroadcast() {
         connect();
       }, 4000);
     }
-  }, [setAndPersistState]);
+  }, [isController]);
 
   useEffect(() => {
     connect();
@@ -486,7 +488,7 @@ export function useBroadcast() {
         if (data && typeof data === 'object' && data.settings) {
           const incomingState = data;
           setState((prev) => {
-            if (prev && prev.updatedAt && incomingState && incomingState.updatedAt && incomingState.updatedAt < prev.updatedAt) {
+            if (isController && prev && prev.updatedAt && incomingState && incomingState.updatedAt && incomingState.updatedAt < prev.updatedAt) {
               // Server state is older than local state. POST newer local state back to server.
               fetch('/api/state', {
                 method: 'POST',
@@ -510,7 +512,7 @@ export function useBroadcast() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isWsConnected]);
+  }, [isWsConnected, isController]);
 
   // Helper to publish updates to Firestore or fallback ntfy.sh Cloud Sync topic
   const publishToCloud = useCallback(async (payload: any) => {
@@ -558,8 +560,6 @@ export function useBroadcast() {
     if (isConnected) return; // If connected to active server, prioritize server authoritative clock
     if (!state.timer.isRunning) return;
 
-    const isController = typeof window !== 'undefined' && !window.location.pathname.includes('/output');
-
     const t = setInterval(() => {
       setState((prev) => {
         const nextSecs = prev.timer.timeSeconds + 1;
@@ -596,7 +596,7 @@ export function useBroadcast() {
     }, 1000);
 
     return () => clearInterval(t);
-  }, [isConnected, state.timer.isRunning, cloudSyncEnabled, publishToCloud]);
+  }, [isConnected, state.timer.isRunning, cloudSyncEnabled, publishToCloud, isController]);
 
   // Subscribe to Cloud Sync stream (Firestore or fallback ntfy.sh SSE)
   useEffect(() => {
