@@ -67,7 +67,7 @@ export const DEFAULT_STATE: BroadcastState = {
     location: 'Emirates Arena, London',
     referee: 'Michael Oliver',
     kickoffTime: '20:00 BST',
-    competitionLogo: '🏆',
+    competitionLogo: '',
     season: '2026/27',
   },
   scoreboard: {
@@ -122,7 +122,7 @@ export const DEFAULT_STATE: BroadcastState = {
   activeLowerThird: null,
   activeSponsor: {
     type: null,
-    logoUrl: '⭐',
+    logoUrl: '',
     sponsorName: 'Z-raff Tech Solutions',
     promoText: 'Elevating Sports Broadcast Graphics Everywhere',
   },
@@ -151,6 +151,9 @@ export function useBroadcast() {
     }
     return DEFAULT_STATE;
   });
+
+  const stateRef = useRef<BroadcastState>(state);
+  stateRef.current = state;
 
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
   const [isRestConnected, setIsRestConnected] = useState<boolean>(false);
@@ -728,59 +731,52 @@ export function useBroadcast() {
   }, [syncKey, cloudSyncEnabled, setAndPersistState]);
 
   const updateState = useCallback((updater: BroadcastState | ((prev: BroadcastState) => BroadcastState)) => {
-    let nextState: BroadcastState | null = null;
-    setState((prev) => {
-      const rawNext = typeof updater === 'function' ? updater(prev) : updater;
-      nextState = { ...rawNext, updatedAt: Date.now() };
-      return nextState;
-    });
+    const prev = stateRef.current;
+    const rawNext = typeof updater === 'function' ? updater(prev) : updater;
+    const nextState = { ...rawNext, updatedAt: Date.now() };
 
-    // Run communication side-effects outside of the setState callback
-    setTimeout(() => {
-      if (!nextState) return;
-      const stateToSync = nextState as BroadcastState;
+    setState(nextState);
 
-      // 1. Save to LocalStorage for offline persistence
-      try {
-        localStorage.setItem('broadcast_state', JSON.stringify(stateToSync));
-      } catch (e) {
-        // Ignore
-      }
+    // 1. Save to LocalStorage for offline persistence
+    try {
+      localStorage.setItem('broadcast_state', JSON.stringify(nextState));
+    } catch (e) {
+      // Ignore
+    }
 
-      // 2. Broadcast via BroadcastChannel to other local tabs
-      if (typeof window !== 'undefined') {
-        const channel = new BroadcastChannel('broadcast_state_sync');
-        channel.postMessage({ type: 'STATE_UPDATE', state: stateToSync });
-        channel.close();
-      }
+    // 2. Broadcast via BroadcastChannel to other local tabs
+    if (typeof window !== 'undefined') {
+      const channel = new BroadcastChannel('broadcast_state_sync');
+      channel.postMessage({ type: 'STATE_UPDATE', state: nextState });
+      channel.close();
+    }
 
-      // 3. Sync with live WebSocket server if connected
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({
-          type: 'UPDATE_STATE',
-          state: stateToSync,
-        }));
-      } else {
-        // REST API backup sync
-        fetch('/api/state', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(stateToSync),
-        }).catch(() => {
-          // Silent catch
-        });
-      }
+    // 3. Sync with live WebSocket server if connected
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'UPDATE_STATE',
+        state: nextState,
+      }));
+    } else {
+      // REST API backup sync
+      fetch('/api/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(nextState),
+      }).catch(() => {
+        // Silent catch
+      });
+    }
 
-      // 4. Sync via Cloud Sync if enabled
-      if (cloudSyncEnabled) {
-        publishToCloud({
-          type: 'STATE_UPDATE',
-          state: stateToSync,
-        });
-      }
-    }, 0);
+    // 4. Sync via Cloud Sync if enabled
+    if (cloudSyncEnabled) {
+      publishToCloud({
+        type: 'STATE_UPDATE',
+        state: nextState,
+      });
+    }
   }, [cloudSyncEnabled, publishToCloud]);
 
   const triggerReplay = useCallback(() => {

@@ -62,7 +62,7 @@ const initialBroadcastState: BroadcastState = {
     location: 'Emirates Arena, London',
     referee: 'Michael Oliver',
     kickoffTime: '20:00 BST',
-    competitionLogo: '🏆',
+    competitionLogo: '',
     season: '2026/27',
   },
   scoreboard: {
@@ -117,7 +117,7 @@ const initialBroadcastState: BroadcastState = {
   activeLowerThird: null,
   activeSponsor: {
     type: null,
-    logoUrl: '⭐',
+    logoUrl: '',
     sponsorName: 'Z-raff Tech Solutions',
     promoText: 'Elevating Sports Broadcast Graphics Everywhere',
   },
