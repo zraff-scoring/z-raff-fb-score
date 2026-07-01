@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trophy, Activity, Star, Circle, CheckCircle2, XCircle, RotateCcw, RefreshCw, EyeOff } from 'lucide-react';
-import { BroadcastState } from '../types.js';
+import { BroadcastState, Player } from '../types.js';
 
 interface ScoreboardCategoryProps {
   state: BroadcastState;
@@ -15,6 +15,10 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
   const [goalMinute, setGoalMinute] = useState(45);
   const [goalNumber, setGoalNumber] = useState(1);
   const [autoIncrementScore, setAutoIncrementScore] = useState(true);
+
+  // Custom typed names if "custom_manual" option is selected
+  const [customScorer, setCustomScorer] = useState('');
+  const [customAssist, setCustomAssist] = useState('');
 
   // Scoreboard manual increments/decrements
   const adjustScore = (team: 'home' | 'away', amount: number) => {
@@ -43,6 +47,9 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
     // Automatically calculate the current match minute from the live timer
     const calculatedMinute = Math.floor(state.timer.timeSeconds / 60) + 1;
 
+    const finalScorer = goalScorer === 'custom_manual' ? customScorer : goalScorer;
+    const finalAssist = goalAssist === 'custom_manual' ? customAssist : goalAssist;
+
     updateState((prev) => {
       const nextScore = autoIncrementScore 
         ? (goalTeam === 'home' ? prev.scoreboard.homeScore + 1 : prev.scoreboard.awayScore + 1)
@@ -60,8 +67,8 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
         scoreboard: updatedScoreboard,
         activeGoal: {
           team: goalTeam,
-          scorer: goalScorer || 'Unidentified Scorer',
-          assist: goalAssist || '',
+          scorer: finalScorer || 'Unidentified Scorer',
+          assist: finalAssist || '',
           minute: calculatedMinute,
           goalNumber,
         }
@@ -105,6 +112,18 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
       }
     }));
   };
+
+  const activePlayers = goalTeam === 'home'
+    ? [
+        ...(state.lineups.homeStartingXI || []).slice(0, state.lineups.rosterSize || 11),
+        ...(state.lineups.homeSubs || [])
+      ]
+    : [
+        ...(state.lineups.awayStartingXI || []).slice(0, state.lineups.rosterSize || 11),
+        ...(state.lineups.awaySubs || [])
+      ];
+
+  const activeTeamPlayers = activePlayers.filter(p => p && p.name && p.name.trim() !== '');
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -443,12 +462,18 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
           </p>
 
           <div className="flex flex-col gap-3.5">
-            {/* Scoring Team Selector */}
+             {/* Scoring Team Selector */}
             <div className="flex flex-col">
               <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Scoring Team</label>
               <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-850">
                 <button 
-                  onClick={() => setGoalTeam('home')}
+                  onClick={() => {
+                    setGoalTeam('home');
+                    setGoalScorer('');
+                    setGoalAssist('');
+                    setCustomScorer('');
+                    setCustomAssist('');
+                  }}
                   className={`py-2 rounded-lg text-xs font-bold transition-all uppercase cursor-pointer ${
                     goalTeam === 'home' 
                       ? 'bg-blue-600 text-white shadow-md' 
@@ -459,7 +484,13 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
                   {state.settings.homeTeam || 'Home Team'}
                 </button>
                 <button 
-                  onClick={() => setGoalTeam('away')}
+                  onClick={() => {
+                    setGoalTeam('away');
+                    setGoalScorer('');
+                    setGoalAssist('');
+                    setCustomScorer('');
+                    setCustomAssist('');
+                  }}
                   className={`py-2 rounded-lg text-xs font-bold transition-all uppercase cursor-pointer ${
                     goalTeam === 'away' 
                       ? 'bg-blue-600 text-white shadow-md' 
@@ -476,25 +507,57 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="flex flex-col">
                 <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Scorer Full Name</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Bukayo Saka" 
+                <select 
                   value={goalScorer}
                   onChange={(e) => setGoalScorer(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white"
-                  id="goal-scorer-name"
-                />
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white cursor-pointer mb-2"
+                  id="goal-scorer-select"
+                >
+                  <option value="">Select Scorer...</option>
+                  {activeTeamPlayers.map((player) => (
+                    <option key={player.id || player.name} value={player.name}>
+                      #{player.number} {player.name} ({player.position})
+                    </option>
+                  ))}
+                  <option value="custom_manual">-- Type Custom Name --</option>
+                </select>
+                {goalScorer === 'custom_manual' && (
+                  <input 
+                    type="text" 
+                    placeholder="Enter Custom Scorer Name" 
+                    value={customScorer}
+                    onChange={(e) => setCustomScorer(e.target.value)}
+                    className="bg-slate-950 border border-blue-500 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white"
+                    id="goal-scorer-custom-input"
+                  />
+                )}
               </div>
               <div className="flex flex-col">
                 <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Assist Provided By</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Martin Ødegaard" 
+                <select 
                   value={goalAssist}
                   onChange={(e) => setGoalAssist(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white"
-                  id="goal-assist-name"
-                />
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white cursor-pointer mb-2"
+                  id="goal-assist-select"
+                >
+                  <option value="">None (No Assist)</option>
+                  {activeTeamPlayers.map((player) => (
+                    <option key={player.id || player.name} value={player.name}>
+                      #{player.number} {player.name} ({player.position})
+                    </option>
+                  ))}
+                  <option value="custom_manual">-- Type Custom Name --</option>
+                </select>
+                {goalAssist === 'custom_manual' && (
+                  <input 
+                    type="text" 
+                    placeholder="Enter Custom Assist Name" 
+                    value={customAssist}
+                    onChange={(e) => setCustomAssist(e.target.value)}
+                    className="bg-slate-950 border border-blue-500 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white"
+                    id="goal-assist-custom-input"
+                  />
+                )}
               </div>
             </div>
 
