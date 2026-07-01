@@ -3,89 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-    <script>
-      (function() {
-        const isBenignError = (msg) => {
-          if (!msg) return false;
-          const s = String(msg).toLowerCase();
-          return s.includes('websocket') || 
-                 s.includes('ws:') || 
-                 s.includes('closed without opened') || 
-                 s.includes('closed') ||
-                 s.includes('[vite]');
-        };
-
-        window.addEventListener('error', function(event) {
-          const msg = event.message || (event.error && event.error.message) || '';
-          if (isBenignError(msg)) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-          }
-        }, true);
-
-        window.addEventListener('unhandledrejection', function(event) {
-          const reason = event.reason;
-          const msg = reason ? (reason.message || reason.description || reason) : '';
-          if (isBenignError(msg)) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-          }
-        }, true);
-
-        // Intercept console.error and console.warn to suppress benign Vite HMR warnings/errors
-        const originalConsoleError = console.error;
-        console.error = function(...args) {
-          const msg = args.map(arg => {
-            try {
-              return String(arg || '');
-            } catch (e) {
-              return '';
-            }
-          }).join(' ');
-          if (isBenignError(msg)) {
-            return;
-          }
-          originalConsoleError.apply(console, args);
-        };
-
-        const originalConsoleWarn = console.warn;
-        console.warn = function(...args) {
-          const msg = args.map(arg => {
-            try {
-              return String(arg || '');
-            } catch (e) {
-              return '';
-            }
-          }).join(' ');
-          if (isBenignError(msg)) {
-            return;
-          }
-          originalConsoleWarn.apply(console, args);
-        };
-
-        // Proxy the global WebSocket constructor to capture and swallow HMR socket connection errors
-        const OriginalWebSocket = window.WebSocket;
-        if (OriginalWebSocket) {
-          const ProxiedWebSocket = function(url, protocols) {
-            const ws = protocols ? new OriginalWebSocket(url, protocols) : new OriginalWebSocket(url);
-            ws.addEventListener('error', function(e) {
-              // Silently swallow WebSocket errors to avoid Unhandled Rejection popups
-            });
-            return ws;
-          };
-          ProxiedWebSocket.prototype = OriginalWebSocket.prototype;
-          Object.keys(OriginalWebSocket).forEach(key => {
-            ProxiedWebSocket[key] = OriginalWebSocket[key];
-          });
-          window.WebSocket = ProxiedWebSocket;
-        }
-      })();
-    </script>
+    <title>Football Live Scoring & OBS Broadcast Control Panel</title>
   </head>
-  <body>
+  <body class="bg-slate-950 text-slate-100">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

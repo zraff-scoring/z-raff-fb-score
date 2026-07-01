@@ -13,7 +13,8 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'Arabi45#') {
+    const systemPassword = import.meta.env.VITE_APP_PASSWORD || 'Arabi45#';
+    if (password === systemPassword) {
       setSuccess(true);
       setError('');
       setTimeout(() => {
@@ -106,7 +107,7 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
 function AppContent() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [isUnlocked, setIsUnlocked] = useState(() => {
-    return localStorage.getItem('zraff_app_unlocked') === 'true';
+    return sessionStorage.getItem('zraff_app_unlocked') === 'true';
   });
 
   useEffect(() => {
@@ -130,7 +131,7 @@ function AppContent() {
     return (
       <PasswordGate 
         onUnlock={() => {
-          localStorage.setItem('zraff_app_unlocked', 'true');
+          sessionStorage.setItem('zraff_app_unlocked', 'true');
           setIsUnlocked(true);
         }} 
       />
@@ -141,7 +142,7 @@ function AppContent() {
   return (
     <ControlPanel 
       onLock={() => {
-        localStorage.removeItem('zraff_app_unlocked');
+        sessionStorage.removeItem('zraff_app_unlocked');
         setIsUnlocked(false);
       }} 
     />
@@ -149,54 +150,6 @@ function AppContent() {
 }
 
 export default function App() {
-  useEffect(() => {
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      try {
-        const reason = event.reason;
-        const msg = reason ? String(reason.message || reason.description || reason) : '';
-        if (
-          !reason ||
-          msg.includes('WebSocket') || 
-          msg.includes('websocket') || 
-          msg.includes('ws:') || 
-          msg.includes('closed without opened') ||
-          msg.includes('closed')
-        ) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-        }
-      } catch (e) {
-        event.preventDefault();
-      }
-    };
-
-    const handleGlobalError = (event: ErrorEvent) => {
-      try {
-        const msg = String(event.message || event.error || event.filename);
-        if (
-          msg.includes('WebSocket') || 
-          msg.includes('websocket') || 
-          msg.includes('ws:') || 
-          msg.includes('closed without opened') ||
-          msg.includes('closed')
-        ) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-        }
-      } catch (e) {
-        event.preventDefault();
-      }
-    };
-
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    window.addEventListener('error', handleGlobalError);
-
-    return () => {
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      window.removeEventListener('error', handleGlobalError);
-    };
-  }, []);
-
   return (
     <AuthProvider>
       <AppContent />

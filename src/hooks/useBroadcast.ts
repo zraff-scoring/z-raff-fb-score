@@ -6,11 +6,9 @@ import {
   setDoc,
   onSnapshot,
   getDoc,
-  handleFirestoreError,
-  OperationType
 } from '../lib/firebase.js';
 
-// Default mock players matching the server setup
+// Default mock players
 const defaultHomeXI: Player[] = [
   { id: 'h1', name: 'Aaron Ramsdale', number: 1, position: 'GK', x: 10, y: 50 },
   { id: 'h2', name: 'Ben White', number: 4, position: 'DF', x: 30, y: 15 },
@@ -147,12 +145,6 @@ const getDeterministicSyncKey = (): string => {
   return 'zraff-sports-global-sync';
 };
 
-const isLocalBackendSupported = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1' || host.includes('.run.app') || host.includes('localhost');
-};
-
 export function useBroadcast() {
   // Initialize from LocalStorage if available, fallback to DEFAULT_STATE
   const [state, setState] = useState<BroadcastState>(() => {
@@ -173,20 +165,30 @@ export function useBroadcast() {
   const stateRef = useRef<BroadcastState>(state);
   stateRef.current = state;
 
-  const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
-  const [isRestConnected, setIsRestConnected] = useState<boolean>(false);
-  const isConnected = isWsConnected || isRestConnected;
-  const socketRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
+  const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(false);
+  const isConnected = isFirestoreConnected;
 
   // Client ID to prevent self-update loops
   const clientId = useRef<string>(Math.random().toString(36).substring(2, 10));
-
   const isController = typeof window !== 'undefined' && !window.location.pathname.includes('/output');
 
-  const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(true);
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('cloud_sync_enabled');
+      return saved !== 'false'; // Default to true
+    } catch (e) {
+      return true;
+    }
+  });
 
-  const [syncKey, setSyncKey] = useState<string>(getDeterministicSyncKey);
+  const [syncKey, setSyncKey] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('cloud_sync_key');
+      return saved || getDeterministicSyncKey();
+    } catch (e) {
+      return getDeterministicSyncKey();
+    }
+  });
 
   // Sync state helper to both local state & local storage safely
   const setAndPersistState = useCallback((next: BroadcastState) => {
@@ -203,48 +205,15 @@ export function useBroadcast() {
     });
   }, [isController]);
 
-  // Fetch initial state via REST API on load to override with live server values if running
+  // Fetch initial state from Firestore
   useEffect(() => {
-    let active = true;
-    const fetchInitialState = async () => {
-      try {
-        const res = await fetch('/api/state');
-        if (!res.ok) {
-          setIsRestConnected(false);
-          return;
-        }
-        const data = await res.json();
-        if (active && data && typeof data === 'object' && data.settings) {
-          setAndPersistState(data);
-          setIsRestConnected(true);
-        }
-      } catch (err) {
-        // Silently ignore initial fetch errors (running serverless)
-        setIsRestConnected(false);
-      }
-    };
-    fetchInitialState();
-    return () => {
-      active = false;
-    };
-  }, [setAndPersistState]);
-
-  // Fetch initial state from cloud sync source (Firestore or fallback ntfy.sh) on active load
-  useEffect(() => {
-    if (!syncKey) return;
-    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-    const hasUrlSyncKey = urlParams?.has('syncKey');
-    const shouldFetch = hasUrlSyncKey || cloudSyncEnabled;
-
-    if (!shouldFetch) return;
+    if (!syncKey || !cloudSyncEnabled) return;
 
     let active = true;
 
     const fetchCloudHistory = async () => {
       const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
       if (!active) return;
-
-      let fetchedFromFirestore = false;
 
       if (!isFirebaseMock && firestoreDb) {
         try {
@@ -255,45 +224,11 @@ export function useBroadcast() {
               const parsedState = JSON.parse(data.stateJson);
               if (parsedState && parsedState.settings) {
                 setAndPersistState(parsedState);
-                fetchedFromFirestore = true;
               }
             }
           }
         } catch (err) {
-          console.error('Failed to fetch initial state from Firestore (falling back to ntfy):', err);
-          try {
-            handleFirestoreError(err, OperationType.GET, `broadcast_states/${syncKey}`);
-          } catch (thrownErr) {
-            // Error captured, continue fallback gracefully
-          }
-        }
-      }
-
-      if (!fetchedFromFirestore) {
-        try {
-          const res = await fetch(`https://ntfy.sh/${syncKey}/json?poll=1`);
-          if (!res.ok) return;
-          const text = await res.text();
-          const lines = text.split('\n').filter(Boolean);
-          let latestState = null;
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line);
-              if (data.event === 'message' && data.message) {
-                const payload = JSON.parse(data.message);
-                if (payload.type === 'STATE_UPDATE' && payload.state) {
-                  latestState = payload.state;
-                }
-              }
-            } catch (e) {
-              // Ignore parse errors for keepalive or other ntfy events
-            }
-          }
-          if (active && latestState && latestState.settings) {
-            setAndPersistState(latestState);
-          }
-        } catch (err) {
-          console.error('Failed to fetch initial cloud sync state from ntfy fallback:', err);
+          console.error('Failed to fetch initial state from Firestore:', err);
         }
       }
     };
@@ -305,126 +240,7 @@ export function useBroadcast() {
     };
   }, [syncKey, cloudSyncEnabled, setAndPersistState]);
 
-  // Connect to live WebSocket if available
-  const connect = useCallback(() => {
-    if (!isLocalBackendSupported()) {
-      setIsWsConnected(false);
-      return;
-    }
-
-    if (socketRef.current) {
-      try {
-        socketRef.current.onclose = null;
-        socketRef.current.onerror = null;
-        if (socketRef.current.readyState === WebSocket.OPEN || socketRef.current.readyState === WebSocket.CONNECTING) {
-          socketRef.current.close();
-        }
-      } catch (e) {
-        // Ignore
-      }
-    }
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/ws`;
-    
-    try {
-      const socket = new WebSocket(wsUrl);
-      socketRef.current = socket;
-
-      socket.onopen = () => {
-        setIsWsConnected(true);
-        if (reconnectTimeoutRef.current) {
-          window.clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
-        }
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'STATE_UPDATE' && data.state) {
-            const incomingState = data.state;
-            setState((prev) => {
-              if (isController && prev && prev.updatedAt && incomingState && incomingState.updatedAt && incomingState.updatedAt < prev.updatedAt) {
-                // Server state is older than local state. Send newer local state back to server.
-                if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-                  socketRef.current.send(JSON.stringify({
-                    type: 'UPDATE_STATE',
-                    state: prev
-                  }));
-                }
-                return prev;
-              }
-              try {
-                localStorage.setItem('broadcast_state', JSON.stringify(incomingState));
-              } catch (e) {}
-              return incomingState;
-            });
-
-            if (data.state && !data.state.activeReplay) {
-              const endReplayEvent = new CustomEvent('broadcast-replay-end');
-              window.dispatchEvent(endReplayEvent);
-            }
-          } else if (data.type === 'TRIGGER_REPLAY') {
-            const replayEvent = new CustomEvent('broadcast-replay');
-            window.dispatchEvent(replayEvent);
-          }
-        } catch (err) {
-          // Ignore
-        }
-      };
-
-      socket.onclose = () => {
-        setIsWsConnected(false);
-        if (reconnectTimeoutRef.current) {
-          window.clearTimeout(reconnectTimeoutRef.current);
-        }
-        reconnectTimeoutRef.current = window.setTimeout(() => {
-          connect();
-        }, 4000);
-      };
-
-      socket.onerror = () => {
-        try {
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.close();
-          }
-        } catch (e) {
-          // Ignore
-        }
-      };
-    } catch (e) {
-      setIsWsConnected(false);
-      if (reconnectTimeoutRef.current) {
-        window.clearTimeout(reconnectTimeoutRef.current);
-      }
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        connect();
-      }, 4000);
-    }
-  }, [isController]);
-
-  useEffect(() => {
-    connect();
-    return () => {
-      if (socketRef.current) {
-        try {
-          socketRef.current.onclose = null;
-          socketRef.current.onerror = null;
-          if (socketRef.current.readyState === WebSocket.OPEN || socketRef.current.readyState === WebSocket.CONNECTING) {
-            socketRef.current.close();
-          }
-        } catch (e) {
-          // Ignore
-        }
-      }
-      if (reconnectTimeoutRef.current) {
-        window.clearTimeout(reconnectTimeoutRef.current);
-      }
-    };
-  }, [connect]);
-
-  // Cross-tab synchronization via BroadcastChannel for serverless/static environments like Vercel
+  // Cross-tab synchronization via BroadcastChannel for instant same-browser syncing
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
@@ -452,58 +268,9 @@ export function useBroadcast() {
     };
   }, [setAndPersistState]);
 
-  // HTTP polling fallback when WebSocket is not connected or fails
-  useEffect(() => {
-    if (!isLocalBackendSupported()) {
-      setIsRestConnected(false);
-      return;
-    }
-
-    if (isWsConnected) {
-      setIsRestConnected(false);
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch('/api/state');
-        if (!res.ok) {
-          setIsRestConnected(false);
-          return;
-        }
-        const data = await res.json();
-        if (data && typeof data === 'object' && data.settings) {
-          const incomingState = data;
-          setState((prev) => {
-            if (isController && prev && prev.updatedAt && incomingState && incomingState.updatedAt && incomingState.updatedAt < prev.updatedAt) {
-              // Server state is older than local state. POST newer local state back to server.
-              fetch('/api/state', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(prev),
-              }).catch(() => {});
-              return prev;
-            }
-            try {
-              localStorage.setItem('broadcast_state', JSON.stringify(incomingState));
-            } catch (e) {}
-            return incomingState;
-          });
-          setIsRestConnected(true);
-        }
-      } catch (err) {
-        setIsRestConnected(false);
-      }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isWsConnected, isController]);
-
-  // Helper to publish updates to Firestore or fallback ntfy.sh Cloud Sync topic
+  // Helper to publish updates to Firestore
   const publishToCloud = useCallback(async (payload: any) => {
-    if (!syncKey) return;
+    if (!syncKey || !cloudSyncEnabled) return;
 
     // Attach sender ID to payload to prevent infinite self-reverberation loops
     payload.sender = clientId.current;
@@ -515,34 +282,17 @@ export function useBroadcast() {
         await setDoc(doc(firestoreDb, 'broadcast_states', syncKey), {
           syncKey,
           updatedAt: new Date().toISOString(),
-          // Store raw state JSON for backward compatibility
           stateJson: payload.type === 'STATE_UPDATE' && payload.state ? JSON.stringify(payload.state) : null,
-          // Store complete unified action payload for replay, score updates, etc.
           lastPayloadJson: JSON.stringify(payload)
         });
       } catch (err) {
         console.error('Firestore failed to save state:', err);
-        try {
-          handleFirestoreError(err, OperationType.WRITE, `broadcast_states/${syncKey}`);
-        } catch (thrown) {}
       }
     }
+  }, [syncKey, cloudSyncEnabled]);
 
-    // ALWAYS publish to ntfy.sh in background for dual-channel absolute synchronization
-    fetch(`https://ntfy.sh/${syncKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-      body: JSON.stringify(payload),
-    }).catch((err) => {
-      console.error('Cloud Sync failed to publish to ntfy:', err);
-    });
-  }, [syncKey]);
-
-  // Local client-side timer tick backup (important for Vercel/serverless where server ticker is absent)
+  // Local client-side timer tick (crucial for accurate match timing)
   useEffect(() => {
-    if (isConnected) return; // If connected to active server, prioritize server authoritative clock
     if (!state.timer.isRunning) return;
 
     const t = setInterval(() => {
@@ -561,14 +311,14 @@ export function useBroadcast() {
           // Ignore
         }
         
-        // Notify other tabs immediately of the new second ticker
+        // Notify other tabs immediately
         if (typeof window !== 'undefined') {
           const channel = new BroadcastChannel('broadcast_state_sync');
           channel.postMessage({ type: 'STATE_UPDATE', state: updated });
           channel.close();
         }
 
-        // If Cloud Sync is enabled, and we are the controller, publish a sync update every 5 seconds
+        // Publish to Firestore periodically (every 5 seconds) to keep OBS in sync
         if (cloudSyncEnabled && isController && nextSecs % 5 === 0) {
           publishToCloud({
             type: 'STATE_UPDATE',
@@ -581,82 +331,30 @@ export function useBroadcast() {
     }, 1000);
 
     return () => clearInterval(t);
-  }, [isConnected, state.timer.isRunning, cloudSyncEnabled, publishToCloud, isController]);
+  }, [state.timer.isRunning, cloudSyncEnabled, publishToCloud, isController]);
 
-  // Subscribe to Cloud Sync stream (Firestore or fallback ntfy.sh SSE)
+  // Subscribe to Firestore changes
   useEffect(() => {
-    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-    const hasUrlSyncKey = urlParams?.has('syncKey');
-    const shouldSubscribe = syncKey && (hasUrlSyncKey || cloudSyncEnabled);
-
-    if (!shouldSubscribe) return;
+    if (!syncKey || !cloudSyncEnabled) {
+      setIsFirestoreConnected(false);
+      return;
+    }
 
     let unsubFirestore: (() => void) | null = null;
-    let sse: EventSource | null = null;
-    let reconnectTimeout: number | null = null;
     let active = true;
 
     const startSubscription = async () => {
       const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
       if (!active) return;
 
-      const connectSse = () => {
-        try {
-          if (sse) sse.close();
-          sse = new EventSource(`https://ntfy.sh/${syncKey}/sse`);
-
-          sse.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data);
-              if (data.event === 'message' && data.message) {
-                const payload = JSON.parse(data.message);
-                
-                // Skip if sent by our own client instance
-                if (payload.sender === clientId.current) {
-                  return;
-                }
-
-                if (payload.type === 'STATE_UPDATE' && payload.state) {
-                  if (payload.state.settings) {
-                    setAndPersistState(payload.state);
-                    if (!payload.state.activeReplay) {
-                      const endReplayEvent = new CustomEvent('broadcast-replay-end');
-                      window.dispatchEvent(endReplayEvent);
-                    }
-                  }
-                } else if (payload.type === 'TRIGGER_REPLAY') {
-                  const replayEvent = new CustomEvent('broadcast-replay');
-                  window.dispatchEvent(replayEvent);
-                }
-              }
-            } catch (err) {
-              // Ignore parse errors
-            }
-          };
-
-          sse.onerror = () => {
-            if (sse) sse.close();
-            reconnectTimeout = window.setTimeout(() => {
-              if (active) connectSse();
-            }, 3000);
-          };
-        } catch (e) {
-          console.error('Failed to establish Cloud Sync EventSource:', e);
-        }
-      };
-
-      // ALWAYS run secondary ntfy.sh SSE connection in parallel to guarantee zero-downtime, sandboxed OBS Browser Source syncing
-      connectSse();
-
       if (!isFirebaseMock && firestoreDb) {
-        console.log('Establishing Firestore real-time listener for syncKey:', syncKey);
         try {
           unsubFirestore = onSnapshot(doc(firestoreDb, 'broadcast_states', syncKey), (docSnap) => {
             if (!active) return;
+            setIsFirestoreConnected(true);
             if (docSnap.exists()) {
               const data = docSnap.data();
               if (data) {
-                // Parse the complete unified payload first if available
                 if (data.lastPayloadJson) {
                   try {
                     const payload = JSON.parse(data.lastPayloadJson);
@@ -675,36 +373,21 @@ export function useBroadcast() {
                       window.dispatchEvent(replayEvent);
                     }
                   } catch (e) {
-                    console.error('Failed to parse Firestore lastPayloadJson:', e);
-                  }
-                } else if (data.stateJson) {
-                  // Fallback for older schemas
-                  try {
-                    const parsedState = JSON.parse(data.stateJson);
-                    if (parsedState && parsedState.settings) {
-                      setAndPersistState(parsedState);
-                      if (!parsedState.activeReplay) {
-                        const endReplayEvent = new CustomEvent('broadcast-replay-end');
-                        window.dispatchEvent(endReplayEvent);
-                      }
-                    }
-                  } catch (e) {
-                    console.error('Failed to parse Firestore stateJson:', e);
+                    console.error('Failed to parse Firestore snapshot:', e);
                   }
                 }
               }
             }
           }, (err) => {
-            console.error('Firestore real-time subscription error:', err);
-            try {
-              handleFirestoreError(err, OperationType.GET, `broadcast_states/${syncKey}`);
-            } catch (thrownErr) {
-              // Captured error, fallback gracefully
-            }
+            console.error('Firestore subscription error:', err);
+            setIsFirestoreConnected(false);
           });
         } catch (err) {
-          console.error('Failed to setup Firestore listener:', err);
+          console.error('Failed to initialize Firestore subscription:', err);
+          setIsFirestoreConnected(false);
         }
+      } else {
+        setIsFirestoreConnected(false);
       }
     };
 
@@ -714,12 +397,6 @@ export function useBroadcast() {
       active = false;
       if (unsubFirestore) {
         unsubFirestore();
-      }
-      if (sse) {
-        sse.close();
-      }
-      if (reconnectTimeout) {
-        window.clearTimeout(reconnectTimeout);
       }
     };
   }, [syncKey, cloudSyncEnabled, setAndPersistState]);
@@ -731,40 +408,21 @@ export function useBroadcast() {
 
     setState(nextState);
 
-    // 1. Save to LocalStorage for offline persistence
+    // 1. Save to LocalStorage
     try {
       localStorage.setItem('broadcast_state', JSON.stringify(nextState));
     } catch (e) {
       // Ignore
     }
 
-    // 2. Broadcast via BroadcastChannel to other local tabs
+    // 2. Broadcast to other tabs
     if (typeof window !== 'undefined') {
       const channel = new BroadcastChannel('broadcast_state_sync');
       channel.postMessage({ type: 'STATE_UPDATE', state: nextState });
       channel.close();
     }
 
-    // 3. Sync with live WebSocket server if connected
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({
-        type: 'UPDATE_STATE',
-        state: nextState,
-      }));
-    } else {
-      // REST API backup sync
-      fetch('/api/state', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(nextState),
-      }).catch(() => {
-        // Silent catch
-      });
-    }
-
-    // 4. Sync via Cloud Sync if enabled
+    // 3. Sync via Firestore Cloud Sync
     if (cloudSyncEnabled) {
       publishToCloud({
         type: 'STATE_UPDATE',
@@ -774,25 +432,18 @@ export function useBroadcast() {
   }, [cloudSyncEnabled, publishToCloud]);
 
   const triggerReplay = useCallback(() => {
-    // 1. Send over BroadcastChannel instantly
+    // 1. Send over BroadcastChannel
     if (typeof window !== 'undefined') {
       const channel = new BroadcastChannel('broadcast_state_sync');
       channel.postMessage({ type: 'TRIGGER_REPLAY' });
       channel.close();
     }
     
-    // 2. Dispatch local event instantly
+    // 2. Dispatch local event
     const replayEvent = new CustomEvent('broadcast-replay');
     window.dispatchEvent(replayEvent);
 
-    // 3. Dispatch to live server
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: 'TRIGGER_REPLAY' }));
-    } else {
-      fetch('/api/replay', { method: 'POST' }).catch(() => {});
-    }
-
-    // 4. Sync via Cloud Sync if enabled
+    // 3. Sync via Firestore Cloud Sync
     if (cloudSyncEnabled) {
       publishToCloud({ type: 'TRIGGER_REPLAY' });
     }
