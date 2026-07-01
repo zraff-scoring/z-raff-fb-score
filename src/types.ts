@@ -157,6 +157,7 @@ export interface BroadcastState {
     theme?: 'classic' | 'breaking' | 'sponsor';
   } | null;
   updatedAt?: number;
+  replayTriggeredAt?: number;
 }
 
 // Socket communication protocol

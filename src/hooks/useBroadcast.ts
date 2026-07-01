@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BroadcastState, Player } from '../types.js';
-import { io, Socket } from 'socket.io-client';
+import { db } from '../lib/firebase.js';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 // Default mock players
 const defaultHomeXI: Player[] = [
@@ -135,38 +136,39 @@ export const DEFAULT_STATE: BroadcastState = {
   },
 };
 
-// WebSocket server connection URL resolver
-const getSocketUrl = (): string => {
-  const envUrl = import.meta.env.VITE_WEBSOCKET_URL;
-  if (envUrl) return envUrl;
-  
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return 'http://localhost:3000';
-};
+// Firestore error logging and type checking utilities conforming to the firebase-integration skill
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
 
-// Socket.IO singleton instance
-let socketInstance: Socket | null = null;
-
-const getSocket = (): Socket | null => {
-  if (typeof window === 'undefined') return null;
-  if (!socketInstance) {
-    const url = getSocketUrl();
-    console.log(`[Socket] Connecting Socket.IO client to: ${url}`);
-    socketInstance = io(url, {
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 15000,
-      autoConnect: true,
-      transports: ['polling', 'websocket'], // Start with HTTP polling to bypass aggressive proxy firewalls, then upgrade to WebSocket
-      withCredentials: true,
-    });
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
   }
-  return socketInstance;
-};
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: null,
+      email: null,
+    },
+    operationType,
+    path
+  };
+  console.error('[Firestore Error]:', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 export function useBroadcast() {
   // Initialize from LocalStorage if available, fallback to DEFAULT_STATE
@@ -227,39 +229,36 @@ export function useBroadcast() {
   // Debouncing publication ref
   const debounceTimeoutRef = useRef<any>(null);
 
-  // Helper to publish updates over WebSockets
-  const publishToWebSocket = useCallback((payload: any) => {
+  // Helper to publish updates over Firestore
+  const publishToFirestore = useCallback((nextState: BroadcastState, instant = false) => {
     if (!cloudSyncEnabled) return;
-    const s = getSocket();
-    if (!s || !s.connected) return;
 
-    if (payload.type === 'STATE_UPDATE' && payload.state) {
-      // For timer toggles or period shifts, send instantly
-      const prevTimerState = stateRef.current.timer;
-      const isTimerToggle = prevTimerState.isRunning !== payload.state.timer.isRunning || 
-                            prevTimerState.period !== payload.state.timer.period;
-
-      if (isTimerToggle) {
-        if (debounceTimeoutRef.current) {
-          clearTimeout(debounceTimeoutRef.current);
-        }
-        s.emit('STATE_UPDATE', payload.state);
-        return;
-      }
-
-      // Debounce continuous controls (such as sliders and text fields) by 150ms
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-      debounceTimeoutRef.current = setTimeout(() => {
-        s.emit('STATE_UPDATE', payload.state);
-      }, 150);
-    } else if (payload.type === 'TRIGGER_REPLAY') {
-      s.emit('TRIGGER_REPLAY');
-    } else if (payload.type === 'CLEAR_OVERLAYS') {
-      s.emit('CLEAR_OVERLAYS');
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
-  }, [cloudSyncEnabled]);
+
+    const performWrite = async () => {
+      try {
+        const docRef = doc(db, 'broadcast_states', syncKey);
+        await setDoc(docRef, {
+          syncKey,
+          updatedAt: new Date().toISOString(),
+          stateJson: JSON.stringify(nextState)
+        });
+        setIsConnected(true);
+      } catch (err) {
+        setIsConnected(false);
+        handleFirestoreError(err, OperationType.WRITE, `broadcast_states/${syncKey}`);
+      }
+    };
+
+    if (instant) {
+      performWrite();
+    } else {
+      // Debounce inputs by 150ms for performance and Firebase quota protection
+      debounceTimeoutRef.current = setTimeout(performWrite, 150);
+    }
+  }, [cloudSyncEnabled, syncKey]);
 
   // Local client-side timer tick
   useEffect(() => {
@@ -288,12 +287,9 @@ export function useBroadcast() {
           channel.close();
         }
 
-        // Publish over WebSocket periodically (every 5 seconds) to keep overlays in sync
+        // Publish over Firestore periodically (every 5 seconds) to keep overlays in sync
         if (cloudSyncEnabled && isController && nextSecs % 5 === 0) {
-          publishToWebSocket({
-            type: 'STATE_UPDATE',
-            state: updated,
-          });
+          publishToFirestore(updated, true);
         }
 
         return updated;
@@ -301,7 +297,7 @@ export function useBroadcast() {
     }, 1000);
 
     return () => clearInterval(t);
-  }, [state.timer.isRunning, cloudSyncEnabled, publishToWebSocket, isController]);
+  }, [state.timer.isRunning, cloudSyncEnabled, publishToFirestore, isController]);
 
   // Cross-tab synchronization via BroadcastChannel for instant same-browser syncing
   useEffect(() => {
@@ -317,9 +313,6 @@ export function useBroadcast() {
           const endReplayEvent = new CustomEvent('broadcast-replay-end');
           window.dispatchEvent(endReplayEvent);
         }
-      } else if (type === 'TRIGGER_REPLAY') {
-        const replayEvent = new CustomEvent('broadcast-replay');
-        window.dispatchEvent(replayEvent);
       }
     };
     
@@ -331,84 +324,62 @@ export function useBroadcast() {
     };
   }, [setAndPersistState]);
 
-  // Subscribe to Socket.IO events
+  // Subscribe to Firestore events
   useEffect(() => {
     if (!cloudSyncEnabled) {
       setIsConnected(false);
       return;
     }
 
-    const s = getSocket();
-    if (!s) return;
+    const docRef = doc(db, 'broadcast_states', syncKey);
+    console.log(`[Firestore] Subscribing to sync channel: ${syncKey}`);
 
-    setIsConnected(s.connected);
-
-    const onConnect = () => {
-      console.log('[Socket] Connected to WebSocket Server successfully');
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
       setIsConnected(true);
-      
-      // Seed initial state if we are the control panel to set the server's cache
-      if (isController) {
-        s.emit('STATE_UPDATE', stateRef.current);
+      if (!snapshot.exists()) {
+        // If the document doesn't exist yet, we can seed it if we are the controller
+        if (isController) {
+          console.log('[Firestore] Document does not exist. Seeding initial state...');
+          setDoc(docRef, {
+            syncKey,
+            updatedAt: new Date().toISOString(),
+            stateJson: JSON.stringify(stateRef.current)
+          }).catch(err => {
+            console.error('Error seeding document:', err);
+          });
+        }
+        return;
       }
-    };
 
-    const onDisconnect = (reason: string) => {
-      console.log('[Socket] Disconnected from WebSocket Server. Reason:', reason);
-      setIsConnected(false);
-    };
+      const data = snapshot.data();
+      if (data && data.stateJson) {
+        try {
+          const parsed = JSON.parse(data.stateJson);
+          if (parsed && typeof parsed === 'object') {
+            // Compare updatedAt to avoid cycles where the controller updates itself with older data
+            if (parsed.updatedAt && (!stateRef.current.updatedAt || parsed.updatedAt > stateRef.current.updatedAt)) {
+              // Trigger replay event locally if replay trigger timestamp changed
+              if (parsed.replayTriggeredAt && parsed.replayTriggeredAt !== stateRef.current.replayTriggeredAt) {
+                const replayEvent = new CustomEvent('broadcast-replay');
+                window.dispatchEvent(replayEvent);
+              }
 
-    const onConnectError = (error: Error) => {
-      console.error('[Socket] Connection error occurred:', error.message, error);
-      setIsConnected(false);
-    };
-
-    const onReconnectAttempt = (attemptNumber: number) => {
-      console.log(`[Socket] Reconnection attempt #${attemptNumber} in progress...`);
-    };
-
-    const onStateUpdate = (serverState: BroadcastState) => {
-      if (serverState && serverState.settings) {
-        setAndPersistState(serverState);
-        if (!serverState.activeReplay) {
-          const endReplayEvent = new CustomEvent('broadcast-replay-end');
-          window.dispatchEvent(endReplayEvent);
+              setAndPersistState(parsed);
+            }
+          }
+        } catch (err) {
+          console.error('Error parsing synced stateJson:', err);
         }
       }
-    };
-
-    const onTriggerReplay = () => {
-      const replayEvent = new CustomEvent('broadcast-replay');
-      window.dispatchEvent(replayEvent);
-    };
-
-    const onClearOverlays = () => {
-      clearOverlays();
-    };
-
-    s.on('connect', onConnect);
-    s.on('disconnect', onDisconnect);
-    s.on('connect_error', onConnectError);
-    s.on('reconnect_attempt', onReconnectAttempt);
-    s.on('STATE_UPDATE', onStateUpdate);
-    s.on('TRIGGER_REPLAY', onTriggerReplay);
-    s.on('CLEAR_OVERLAYS', onClearOverlays);
-
-    // If socket is already connected when this mounts, trigger onConnect manually
-    if (s.connected) {
-      onConnect();
-    }
+    }, (error) => {
+      console.error('Firestore snapshot subscription error:', error);
+      setIsConnected(false);
+    });
 
     return () => {
-      s.off('connect', onConnect);
-      s.off('disconnect', onDisconnect);
-      s.off('connect_error', onConnectError);
-      s.off('reconnect_attempt', onReconnectAttempt);
-      s.off('STATE_UPDATE', onStateUpdate);
-      s.off('TRIGGER_REPLAY', onTriggerReplay);
-      s.off('CLEAR_OVERLAYS', onClearOverlays);
+      unsubscribe();
     };
-  }, [cloudSyncEnabled, isController, setAndPersistState]);
+  }, [cloudSyncEnabled, syncKey, isController, setAndPersistState]);
 
   const updateState = useCallback((updater: BroadcastState | ((prev: BroadcastState) => BroadcastState)) => {
     const prev = stateRef.current;
@@ -431,32 +402,46 @@ export function useBroadcast() {
       channel.close();
     }
 
-    // 3. Sync via WebSocket
+    // 3. Sync via Firestore
     if (cloudSyncEnabled) {
-      publishToWebSocket({
-        type: 'STATE_UPDATE',
-        state: nextState,
-      });
+      // Detect if it is an instant action (e.g. timer toggle) to bypass debouncing
+      const isTimerToggle = prev.timer.isRunning !== nextState.timer.isRunning || 
+                            prev.timer.period !== nextState.timer.period;
+      publishToFirestore(nextState, isTimerToggle);
     }
-  }, [cloudSyncEnabled, publishToWebSocket]);
+  }, [cloudSyncEnabled, publishToFirestore]);
 
   const triggerReplay = useCallback(() => {
-    // 1. Send over BroadcastChannel
+    const nextState = {
+      ...stateRef.current,
+      activeReplay: true,
+      replayTriggeredAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    setState(nextState);
+
+    // 1. Save locally
+    try {
+      localStorage.setItem('broadcast_state', JSON.stringify(nextState));
+    } catch (e) {}
+
+    // 2. Broadcast to other tabs
     if (typeof window !== 'undefined') {
       const channel = new BroadcastChannel('broadcast_state_sync');
-      channel.postMessage({ type: 'TRIGGER_REPLAY' });
+      channel.postMessage({ type: 'STATE_UPDATE', state: nextState });
       channel.close();
     }
-    
-    // 2. Dispatch local event
+
+    // 3. Dispatch local event
     const replayEvent = new CustomEvent('broadcast-replay');
     window.dispatchEvent(replayEvent);
 
-    // 3. Sync via WebSocket
+    // 4. Publish to Firestore instantly
     if (cloudSyncEnabled) {
-      publishToWebSocket({ type: 'TRIGGER_REPLAY' });
+      publishToFirestore(nextState, true);
     }
-  }, [cloudSyncEnabled, publishToWebSocket]);
+  }, [cloudSyncEnabled, publishToFirestore]);
 
   const clearOverlays = useCallback(() => {
     updateState((prev) => ({
@@ -488,12 +473,7 @@ export function useBroadcast() {
       },
       activeWinnerAnnounce: null
     }));
-
-    const s = getSocket();
-    if (s && s.connected && cloudSyncEnabled) {
-      s.emit('CLEAR_OVERLAYS');
-    }
-  }, [updateState, cloudSyncEnabled]);
+  }, [updateState]);
 
   return {
     state,
@@ -517,3 +497,4 @@ export function useBroadcast() {
     },
   };
 }
+

@@ -77,7 +77,7 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
         <div className="flex flex-col items-center gap-4 text-center">
           <Activity className="w-12 h-12 text-blue-500 animate-spin" />
           <h2 className="text-xl font-black">Syncing with Live Broadcast Server...</h2>
-          <p className="text-xs text-slate-400 max-w-xs">Connecting to WebSocket stream, pulling match configurations.</p>
+          <p className="text-xs text-slate-400 max-w-xs">Connecting to Firestore sync stream, pulling match configurations.</p>
         </div>
       </div>
     );
@@ -108,7 +108,7 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                   : 'bg-red-500/10 text-red-400 border-red-500/20'
               }`}>
-                ● {isConnected ? 'WebSocket Sync Active' : 'Offline/Local'}
+                ● {isConnected ? 'Firestore Sync Active' : 'Offline/Local'}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">Live broadcast operator deck • Controls live OBS Browser Source output</p>
@@ -195,7 +195,7 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
           </div>
 
           <div className="flex items-center gap-2 self-stretch md:self-auto justify-end">
-            <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">WebSocket Sync:</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Firestore Sync:</span>
             <button
               onClick={() => setCloudSyncEnabled(!cloudSyncEnabled)}
               className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5 cursor-pointer border ${
