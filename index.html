@@ -31,6 +31,23 @@
             event.stopImmediatePropagation();
           }
         }, true);
+
+        // Proxy the global WebSocket constructor to capture and swallow HMR socket connection errors
+        const OriginalWebSocket = window.WebSocket;
+        if (OriginalWebSocket) {
+          const ProxiedWebSocket = function(url, protocols) {
+            const ws = protocols ? new OriginalWebSocket(url, protocols) : new OriginalWebSocket(url);
+            ws.addEventListener('error', function(e) {
+              // Silently swallow WebSocket errors to avoid Unhandled Rejection popups
+            });
+            return ws;
+          };
+          ProxiedWebSocket.prototype = OriginalWebSocket.prototype;
+          Object.keys(OriginalWebSocket).forEach(key => {
+            ProxiedWebSocket[key] = OriginalWebSocket[key];
+          });
+          window.WebSocket = ProxiedWebSocket;
+        }
       })();
     </script>
   </head>

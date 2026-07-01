@@ -40,7 +40,7 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
 
   const getOverlayUrl = () => {
     if (typeof window === 'undefined') return '/output';
-    return cloudSyncEnabled && syncKey
+    return syncKey
       ? `${window.location.origin}/output?syncKey=${syncKey}`
       : `${window.location.origin}/output`;
   };

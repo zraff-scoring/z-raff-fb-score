@@ -1560,68 +1560,6 @@ export default function GraphicsOutput() {
       </AnimatePresence>
 
       {/* ---------------------------------------------------- */}
-      {/* 13. ENDLESS SCROLLING NEWS TICKER (MOST IMPORTANT FEATURE) */}
-      {/* ---------------------------------------------------- */}
-      <AnimatePresence>
-        {state.activeTicker?.active && (
-          <motion.div
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
-            className="absolute bottom-0 left-0 right-0 h-10 bg-slate-950/95 border-t border-slate-800 z-50 flex items-center overflow-hidden"
-            id="obs-ticker-overlay"
-          >
-            <style dangerouslySetInnerHTML={{__html: `
-              @keyframes ticker-slide {
-                0% { transform: translate3d(0, 0, 0); }
-                100% { transform: translate3d(-33.33%, 0, 0); }
-              }
-              .ticker-sliding-content {
-                display: inline-flex;
-                white-space: nowrap;
-                animation: ticker-slide 20s linear infinite;
-              }
-            `}} />
-
-            {/* Static Label Tag on Left */}
-            <div className={`h-full px-5 flex items-center gap-2 z-10 font-sans text-xs font-black uppercase tracking-widest shrink-0 border-r shadow-lg shadow-black/40 ${
-              state.activeTicker.theme === 'breaking' 
-                ? 'bg-red-600 text-white border-red-500' 
-                : state.activeTicker.theme === 'sponsor' 
-                  ? 'bg-amber-500 text-slate-950 border-amber-400' 
-                  : 'bg-blue-600 text-white border-blue-500'
-            }`}>
-              <span className="w-2 h-2 rounded-full bg-current animate-ping" />
-              <span>
-                {state.activeTicker.theme === 'breaking' 
-                  ? 'BREAKING' 
-                  : state.activeTicker.theme === 'sponsor' 
-                    ? 'PROMO' 
-                    : 'UPDATES'}
-              </span>
-            </div>
-
-            {/* Endless sliding container */}
-            <div className="flex-1 overflow-hidden relative h-full flex items-center bg-slate-950">
-              <div className="ticker-sliding-content flex items-center gap-12 font-mono text-[11px] font-bold text-slate-200">
-                {/* Repeat the text 3 times to make sure it fills the screen for infinite loop */}
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-12 whitespace-nowrap">
-                    <span>{state.activeTicker.text}</span>
-                    <span className="text-blue-500">•</span>
-                    <span>{state.settings.leagueName.toUpperCase()} LIVE</span>
-                    <span className="text-blue-500">•</span>
-                    <span>{state.settings.homeTeam.toUpperCase()} VS {state.settings.awayTeam.toUpperCase()}</span>
-                    <span className="text-blue-500">★★</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ---------------------------------------------------- */}
       {/* 12. FULL SCREEN REPLAY TRANSITION OVERLAY */}
       {/* ---------------------------------------------------- */}
       <AnimatePresence>

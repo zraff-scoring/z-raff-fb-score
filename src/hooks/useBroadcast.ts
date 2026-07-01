@@ -535,41 +535,39 @@ export function useBroadcast() {
   const publishToCloud = useCallback(async (payload: any) => {
     if (!syncKey) return;
 
+    // Attach sender ID to payload to prevent infinite self-reverberation loops
+    payload.sender = clientId.current;
+
     const { db: firestoreDb, isMock: isFirebaseMock } = await initFirebase();
-    let publishedToFirestore = false;
 
     if (!isFirebaseMock && firestoreDb) {
       try {
-        if (payload.type === 'STATE_UPDATE' && payload.state) {
-          try {
-            await setDoc(doc(firestoreDb, 'broadcast_states', syncKey), {
-              syncKey,
-              updatedAt: new Date().toISOString(),
-              stateJson: JSON.stringify(payload.state)
-            });
-            publishedToFirestore = true;
-          } catch (err) {
-            handleFirestoreError(err, OperationType.WRITE, `broadcast_states/${syncKey}`);
-          }
-        }
+        await setDoc(doc(firestoreDb, 'broadcast_states', syncKey), {
+          syncKey,
+          updatedAt: new Date().toISOString(),
+          // Store raw state JSON for backward compatibility
+          stateJson: payload.type === 'STATE_UPDATE' && payload.state ? JSON.stringify(payload.state) : null,
+          // Store complete unified action payload for replay, score updates, etc.
+          lastPayloadJson: JSON.stringify(payload)
+        });
       } catch (err) {
-        console.error('Firestore failed to save state, trying ntfy fallback:', err);
+        console.error('Firestore failed to save state:', err);
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `broadcast_states/${syncKey}`);
+        } catch (thrown) {}
       }
     }
 
-    if (!publishedToFirestore) {
-      payload.sender = clientId.current;
-
-      fetch(`https://ntfy.sh/${syncKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain',
-        },
-        body: JSON.stringify(payload),
-      }).catch((err) => {
-        console.error('Cloud Sync failed to publish to ntfy:', err);
-      });
-    }
+    // ALWAYS publish to ntfy.sh in background for dual-channel absolute synchronization
+    fetch(`https://ntfy.sh/${syncKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+      body: JSON.stringify(payload),
+    }).catch((err) => {
+      console.error('Cloud Sync failed to publish to ntfy:', err);
+    });
   }, [syncKey]);
 
   // Local client-side timer tick backup (important for Vercel/serverless where server ticker is absent)
@@ -684,18 +682,42 @@ export function useBroadcast() {
             if (!active) return;
             if (docSnap.exists()) {
               const data = docSnap.data();
-              if (data && data.stateJson) {
-                try {
-                  const parsedState = JSON.parse(data.stateJson);
-                  if (parsedState && parsedState.settings) {
-                    setAndPersistState(parsedState);
-                    if (!parsedState.activeReplay) {
-                      const endReplayEvent = new CustomEvent('broadcast-replay-end');
-                      window.dispatchEvent(endReplayEvent);
+              if (data) {
+                // Parse the complete unified payload first if available
+                if (data.lastPayloadJson) {
+                  try {
+                    const payload = JSON.parse(data.lastPayloadJson);
+                    if (payload.sender === clientId.current) return; // Prevent self-update loop
+
+                    if (payload.type === 'STATE_UPDATE' && payload.state) {
+                      if (payload.state.settings) {
+                        setAndPersistState(payload.state);
+                        if (!payload.state.activeReplay) {
+                          const endReplayEvent = new CustomEvent('broadcast-replay-end');
+                          window.dispatchEvent(endReplayEvent);
+                        }
+                      }
+                    } else if (payload.type === 'TRIGGER_REPLAY') {
+                      const replayEvent = new CustomEvent('broadcast-replay');
+                      window.dispatchEvent(replayEvent);
                     }
+                  } catch (e) {
+                    console.error('Failed to parse Firestore lastPayloadJson:', e);
                   }
-                } catch (e) {
-                  console.error('Failed to parse Firestore stateJson:', e);
+                } else if (data.stateJson) {
+                  // Fallback for older schemas
+                  try {
+                    const parsedState = JSON.parse(data.stateJson);
+                    if (parsedState && parsedState.settings) {
+                      setAndPersistState(parsedState);
+                      if (!parsedState.activeReplay) {
+                        const endReplayEvent = new CustomEvent('broadcast-replay-end');
+                        window.dispatchEvent(endReplayEvent);
+                      }
+                    }
+                  } catch (e) {
+                    console.error('Failed to parse Firestore stateJson:', e);
+                  }
                 }
               }
             }
