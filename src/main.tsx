@@ -6,7 +6,8 @@ import './index.css';
 // Resilient global listeners to catch and handle WebSocket and Vite HMR connection issues safely
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
-    const msg = event.reason?.message || String(event.reason);
+    const reason = event.reason;
+    const msg = (reason && (reason.message || String(reason))) || '';
     if (
       msg.includes('WebSocket') ||
       msg.includes('vite') ||

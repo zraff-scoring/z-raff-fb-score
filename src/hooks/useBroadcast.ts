@@ -204,6 +204,17 @@ export function useBroadcast() {
 
   const [syncKey, setSyncKey] = useState<string>(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const urlKey = params.get('key');
+        if (urlKey) {
+          // Keep it in localStorage for future default/resilience
+          try {
+            localStorage.setItem('cloud_sync_key', urlKey);
+          } catch (e) {}
+          return urlKey;
+        }
+      }
       const saved = localStorage.getItem('cloud_sync_key');
       return saved || 'zraff-sports-global-sync';
     } catch (e) {

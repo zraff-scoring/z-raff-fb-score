@@ -40,6 +40,23 @@
             }
           }, true);
 
+          // 1.5 Intercept console.error to filter out benign HMR / WebSocket connection logs
+          const originalConsoleError = console.error;
+          console.error = function(...args) {
+            const firstArg = args[0] ? String(args[0]) : '';
+            if (
+              firstArg.includes('[vite]') || 
+              firstArg.includes('WebSocket') || 
+              firstArg.includes('closed without opened') ||
+              firstArg.includes('HMR') ||
+              firstArg.includes('reconnection')
+            ) {
+              console.warn('[Vite/HMR Shield Silenced Error]:', ...args);
+              return;
+            }
+            originalConsoleError.apply(console, args);
+          };
+
           // 2. Intercept window.WebSocket to mock non-Socket.IO (Vite HMR) websockets
           const OriginalWebSocket = window.WebSocket;
           if (OriginalWebSocket) {

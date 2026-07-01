@@ -40,7 +40,7 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
 
   const getOverlayUrl = () => {
     if (typeof window === 'undefined') return '/output';
-    return `${window.location.origin}/output`;
+    return `${window.location.origin}/output?key=${syncKey}`;
   };
 
   const handleCopyLink = () => {
@@ -257,9 +257,33 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
               <span className="text-amber-500 font-bold uppercase">⚡ Cloud Sync Active:</span>
               <span>Your OBS source will receive score/timer updates in real-time across different browsers/computers!</span>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0 bg-slate-900 border border-slate-850 py-1.5 px-3 rounded-lg">
-              <span className="text-[9px] text-slate-500 uppercase font-black mr-1">Sync Key:</span>
-              <span className="text-blue-400 font-bold select-all">{syncKey}</span>
+            <div className="flex items-center gap-2 shrink-0 bg-slate-900 border border-slate-850 p-1.5 rounded-xl flex-wrap">
+              <span className="text-[9px] text-slate-500 uppercase font-black px-1.5">Sync Key:</span>
+              <input
+                type="text"
+                value={syncKey}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9-_]/g, '').toLowerCase();
+                  setSyncKey(cleaned);
+                }}
+                placeholder="Enter key..."
+                className="bg-slate-950 border border-slate-800 text-blue-400 font-mono text-xs font-bold px-2.5 py-1 rounded-lg w-40 focus:outline-none focus:border-blue-500 transition-all text-center"
+                title="Type a custom sync key"
+              />
+              <button
+                onClick={() => {
+                  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+                  let rand = '';
+                  for (let i = 0; i < 8; i++) {
+                    rand += chars.charAt(Math.floor(Math.random() * chars.length));
+                  }
+                  setSyncKey(`zraff-${rand}`);
+                }}
+                className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-all cursor-pointer"
+                title="Regenerate New Sync Key"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         )}
