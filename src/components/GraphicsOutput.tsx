@@ -654,170 +654,298 @@ export default function GraphicsOutput() {
               </div>
 
               {/* Grid Content */}
-              {state.lineups.activeLineupView === 'vs' ? (
-                <div className="grid grid-cols-2 gap-10 my-6 flex-1 overflow-hidden" id="lineup-vs-grid">
-                  {/* Left Side: Home Starting XI */}
-                  <div className="bg-gradient-to-b from-blue-950/20 to-slate-900/40 rounded-2xl border border-slate-800/80 p-5 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
-                        <div className="flex items-center gap-3">
-                          {isImageUrl(state.settings.homeLogo) ? (
-                            <img src={state.settings.homeLogo} alt="" className="w-8 h-8 rounded-full border border-slate-700 bg-slate-950 object-cover" referrerPolicy="no-referrer" />
+              {state.lineups.activeLineupView === 'vs' ? (() => {
+                const rSize = state.lineups.rosterSize || 11;
+                const homeActive = state.lineups.homeStartingXI.slice(0, rSize);
+                const awayActive = state.lineups.awayStartingXI.slice(0, rSize);
+                const homeCaptain = homeActive.find((p: Player) => p.isCaptain) || homeActive.find((p: Player) => p.position === 'MF') || homeActive[0];
+                const awayCaptain = awayActive.find((p: Player) => p.isCaptain) || awayActive.find((p: Player) => p.position === 'MF') || awayActive[0];
+
+                return (
+                  <div className="flex flex-col flex-1 my-4 justify-between" id="lineup-vs-showcase">
+                    {/* Central Tournament Details Panel */}
+                    <div className="bg-slate-900/50 rounded-2xl border border-slate-800/80 p-5 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden mb-6">
+                      <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+                      
+                      <div className="flex items-center gap-4 mb-2.5">
+                        {state.settings.competitionLogo && (
+                          isImageUrl(state.settings.competitionLogo) ? (
+                            <img src={state.settings.competitionLogo} alt="" className="w-12 h-12 object-contain" referrerPolicy="no-referrer" />
                           ) : (
-                            <span className="text-2xl leading-none">{state.settings.homeLogo}</span>
-                          )}
-                          <h2 className="text-xl font-black text-white uppercase tracking-tight">{state.settings.homeTeam}</h2>
-                        </div>
-                        <span className="text-xs font-mono font-black text-blue-400 bg-blue-950/40 border border-blue-900/30 px-2 py-0.5 rounded uppercase">{state.lineups.homeFormation}</span>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2">
-                        {state.lineups.homeStartingXI.map((player: Player, idx: number) => (
-                          <motion.div 
-                            key={player.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.03 }}
-                            className="flex items-center gap-3 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2"
-                          >
-                            <span className="text-sm font-mono font-black text-blue-500 w-5">{player.number}</span>
-                            <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded uppercase">{player.position}</span>
-                            <span className="text-xs font-bold text-white flex-1">{player.name}</span>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="border-t border-slate-800/60 pt-3 flex items-center justify-between mt-3">
-                      <div>
-                        <span className="text-[9px] font-mono text-slate-400 block uppercase">HEAD COACH</span>
-                        <span className="text-sm font-black text-white">{state.lineups.homeCoach || 'Unassigned'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Side: Away Starting XI */}
-                  <div className="bg-gradient-to-b from-blue-950/20 to-slate-900/40 rounded-2xl border border-slate-800/80 p-5 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
-                        <div className="flex items-center gap-3">
-                          {isImageUrl(state.settings.awayLogo) ? (
-                            <img src={state.settings.awayLogo} alt="" className="w-8 h-8 rounded-full border border-slate-700 bg-slate-950 object-cover" referrerPolicy="no-referrer" />
-                          ) : (
-                            <span className="text-2xl leading-none">{state.settings.awayLogo}</span>
-                          )}
-                          <h2 className="text-xl font-black text-white uppercase tracking-tight">{state.settings.awayTeam}</h2>
-                        </div>
-                        <span className="text-xs font-mono font-black text-blue-400 bg-blue-950/40 border border-blue-900/30 px-2 py-0.5 rounded uppercase">{state.lineups.awayFormation}</span>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2">
-                        {state.lineups.awayStartingXI.map((player: Player, idx: number) => (
-                          <motion.div 
-                            key={player.id}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.03 }}
-                            className="flex items-center gap-3 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2"
-                          >
-                            <span className="text-sm font-mono font-black text-blue-500 w-5">{player.number}</span>
-                            <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded uppercase">{player.position}</span>
-                            <span className="text-xs font-bold text-white flex-1">{player.name}</span>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="border-t border-slate-800/60 pt-3 flex items-center justify-between mt-3">
-                      <div>
-                        <span className="text-[9px] font-mono text-slate-400 block uppercase">HEAD COACH</span>
-                        <span className="text-sm font-black text-white">{state.lineups.awayCoach || 'Unassigned'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-5 gap-8 my-8 flex-1">
-                  {/* Left Side: Pitch Tactical Positioning */}
-                  <div className="col-span-3 bg-gradient-to-b from-blue-950/30 to-slate-900/50 rounded-2xl border border-slate-800/80 p-6 relative overflow-hidden flex items-center justify-center">
-                    {/* Pitch outlines */}
-                    <div className="absolute inset-4 border border-dashed border-slate-800/60 rounded-xl" />
-                    <div className="absolute top-1/2 left-0 right-0 h-px border-t border-dashed border-slate-800/40" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full border border-dashed border-slate-800/40" />
-                    
-                    {/* Player Pins */}
-                    <div className="absolute inset-6">
-                      {(state.lineups.activeLineupView === 'away' ? state.lineups.awayStartingXI : state.lineups.homeStartingXI).map((player: Player, idx: number) => {
-                        const posX = player.x ?? 10;
-                        const posY = player.y ?? 50;
-                        return (
-                          <motion.div 
-                            key={player.id}
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: idx * 0.05 }}
-                            style={{ left: `${posX}%`, top: `${posY}%` }}
-                            className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
-                          >
-                            <div className="w-9 h-9 rounded-full bg-slate-950 border-2 border-blue-500 shadow-lg flex items-center justify-center relative">
-                              <span className="text-xs font-mono font-black text-white">{player.number}</span>
-                            </div>
-                            <div className="bg-slate-950/90 border border-slate-800 rounded px-2 py-0.5 mt-1.5 shadow-md max-w-[100px] truncate text-center">
-                              <p className="text-[10px] font-sans font-bold text-white leading-tight truncate">{player.name.split(' ').pop()}</p>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Right Side: Player List */}
-                  <div className="col-span-2 flex flex-col justify-between bg-slate-900/60 rounded-2xl border border-slate-800/50 p-6">
-                    <div>
-                      <h3 className="text-sm font-black uppercase font-mono text-slate-400 tracking-wider border-b border-slate-800 pb-2 mb-4"> Roster </h3>
-                      <div className="grid grid-cols-1 gap-2.5 max-h-[420px] overflow-y-auto pr-2">
-                        {(state.lineups.activeLineupView === 'away' ? state.lineups.awayStartingXI : state.lineups.homeStartingXI).map((player: Player, idx: number) => (
-                          <motion.div 
-                            key={player.id}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.04 }}
-                            className="flex items-center gap-3 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800/60 rounded-xl px-4 py-2.5"
-                          >
-                            <span className="text-sm font-mono font-black text-blue-500 w-5">{player.number}</span>
-                            <span className="text-xs font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded uppercase">{player.position}</span>
-                            <span className="text-sm font-bold text-white flex-1">{player.name}</span>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] font-mono text-slate-400 block uppercase">HEAD COACH</span>
-                        <span className="text-base font-black text-white mt-0.5 block">
-                          {state.lineups.activeLineupView === 'away' ? state.lineups.awayCoach : state.lineups.homeCoach}
-                        </span>
-                      </div>
-                      {state.lineups.activeLineupView === 'home' ? (
-                        state.settings.homeLogo && (
-                          isImageUrl(state.settings.homeLogo) ? (
-                            <img src={state.settings.homeLogo} alt="" className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900" referrerPolicy="no-referrer" />
-                          ) : (
-                            <span className="text-3xl leading-none flex items-center justify-center w-10 h-10">{state.settings.homeLogo}</span>
+                            <span className="text-4xl leading-none">{state.settings.competitionLogo}</span>
                           )
-                        )
-                      ) : (
-                        state.settings.awayLogo && (
-                          isImageUrl(state.settings.awayLogo) ? (
-                            <img src={state.settings.awayLogo} alt="" className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900" referrerPolicy="no-referrer" />
-                          ) : (
-                            <span className="text-3xl leading-none flex items-center justify-center w-10 h-10">{state.settings.awayLogo}</span>
-                          )
-                        )
-                      )}
+                        )}
+                        <div>
+                          <h2 className="text-2xl font-black text-white tracking-wide uppercase leading-none">{state.settings.leagueName}</h2>
+                          <span className="text-xs font-mono font-bold text-blue-400 uppercase tracking-widest">{state.settings.season || '2026/2027 SEASON'}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 divide-x divide-slate-800 gap-4 max-w-2xl text-xs font-mono text-slate-400 mt-2">
+                        <div className="px-4">
+                          <span className="text-[10px] text-slate-500 block uppercase">VENUE</span>
+                          <span className="text-white font-bold">{state.settings.location}</span>
+                        </div>
+                        <div className="px-4">
+                          <span className="text-[10px] text-slate-500 block uppercase">KICKOFF</span>
+                          <span className="text-white font-bold">{state.settings.kickoffTime}</span>
+                        </div>
+                        <div className="px-4">
+                          <span className="text-[10px] text-slate-500 block uppercase">REFEREE</span>
+                          <span className="text-white font-bold">{state.settings.referee}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Team Matchup and Captains Block */}
+                    <div className="grid grid-cols-11 gap-4 items-stretch flex-1 overflow-hidden">
+                      {/* Left Side (Col 5): Home Team Panel */}
+                      <div className="col-span-5 bg-gradient-to-b from-blue-950/20 to-slate-900/40 rounded-3xl border border-slate-800/80 p-6 flex flex-col justify-between items-center relative overflow-hidden shadow-xl">
+                        {/* Team Title Card */}
+                        <div className="flex items-center gap-4 w-full border-b border-slate-800 pb-4 mb-4">
+                          {state.settings.homeLogo && (
+                            isImageUrl(state.settings.homeLogo) ? (
+                              <img src={state.settings.homeLogo} alt="" className="w-14 h-14 rounded-full border-2 border-slate-700 bg-slate-950 object-cover shadow-lg" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className="text-4xl leading-none flex items-center justify-center w-14 h-14">{state.settings.homeLogo}</span>
+                            )
+                          )}
+                          <div className="text-left w-full truncate">
+                            <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest block leading-none mb-1">HOME CLUB</span>
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-tight truncate">{state.settings.homeTeam}</h2>
+                            <span className="text-xs text-slate-400 font-mono">COACH: {state.lineups.homeCoach}</span>
+                          </div>
+                        </div>
+
+                        {/* Captain Pic Highlight */}
+                        <div className="flex flex-col items-center flex-1 justify-center py-2">
+                          <div className="relative mb-3">
+                            <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-amber-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-950 shadow z-10 font-mono">
+                              C
+                            </div>
+                            <div className="w-36 h-36 rounded-full p-0.5 bg-gradient-to-tr from-amber-500 to-yellow-300 shadow-lg shadow-amber-500/10">
+                              <div className="w-full h-full rounded-full bg-slate-950 overflow-hidden relative border-4 border-slate-950">
+                                {homeCaptain?.photoUrl ? (
+                                  <img src={homeCaptain.photoUrl} alt={homeCaptain.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
+                                    <span className="text-3xl font-black">#{homeCaptain?.number}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-center">
+                            <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold bg-amber-950/40 border border-amber-900/30 px-2 py-0.5 rounded">
+                              {homeCaptain?.position} • JERSEY #{homeCaptain?.number}
+                            </span>
+                            <h3 className="text-xl font-black text-white mt-2 tracking-tight uppercase">
+                              {homeCaptain?.name || 'No Captain Marked'}
+                            </h3>
+                            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest block mt-0.5">TEAM CAPTAIN</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Middle (Col 1): Big VS Graphic */}
+                      <div className="col-span-1 flex flex-col items-center justify-center">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 border border-blue-500 flex items-center justify-center shadow-xl shadow-blue-500/20 text-center relative animate-pulse">
+                          <span className="font-sans font-black text-white italic text-lg tracking-wider">VS</span>
+                          <div className="absolute -inset-1 rounded-full border border-blue-500/30 pointer-events-none" />
+                        </div>
+                      </div>
+
+                      {/* Right Side (Col 5): Away Team Panel */}
+                      <div className="col-span-5 bg-gradient-to-b from-blue-950/20 to-slate-900/40 rounded-3xl border border-slate-800/80 p-6 flex flex-col justify-between items-center relative overflow-hidden shadow-xl">
+                        {/* Team Title Card */}
+                        <div className="flex items-center gap-4 w-full border-b border-slate-800 pb-4 mb-4">
+                          {state.settings.awayLogo && (
+                            isImageUrl(state.settings.awayLogo) ? (
+                              <img src={state.settings.awayLogo} alt="" className="w-14 h-14 rounded-full border-2 border-slate-700 bg-slate-950 object-cover shadow-lg" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className="text-4xl leading-none flex items-center justify-center w-14 h-14">{state.settings.awayLogo}</span>
+                            )
+                          )}
+                          <div className="text-left w-full truncate">
+                            <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest block leading-none mb-1">AWAY CLUB</span>
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-tight truncate">{state.settings.awayTeam}</h2>
+                            <span className="text-xs text-slate-400 font-mono">COACH: {state.lineups.awayCoach}</span>
+                          </div>
+                        </div>
+
+                        {/* Captain Pic Highlight */}
+                        <div className="flex flex-col items-center flex-1 justify-center py-2">
+                          <div className="relative mb-3">
+                            <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-amber-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-950 shadow z-10 font-mono">
+                              C
+                            </div>
+                            <div className="w-36 h-36 rounded-full p-0.5 bg-gradient-to-tr from-amber-500 to-yellow-300 shadow-lg shadow-amber-500/10">
+                              <div className="w-full h-full rounded-full bg-slate-950 overflow-hidden relative border-4 border-slate-950">
+                                {awayCaptain?.photoUrl ? (
+                                  <img src={awayCaptain.photoUrl} alt={awayCaptain.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
+                                    <span className="text-3xl font-black">#{awayCaptain?.number}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-center">
+                            <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold bg-amber-950/40 border border-amber-900/30 px-2 py-0.5 rounded">
+                              {awayCaptain?.position} • JERSEY #{awayCaptain?.number}
+                            </span>
+                            <h3 className="text-xl font-black text-white mt-2 tracking-tight uppercase font-bold">
+                              {awayCaptain?.name || 'No Captain Marked'}
+                            </h3>
+                            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest block mt-0.5">TEAM CAPTAIN</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+                })() : (
+                  <div className="grid grid-cols-12 gap-8 my-8 flex-1 overflow-hidden" id="lineup-team-layout">
+                    {/* Left/Center Side (Col span 8): Starting XI Player List in 2-Column Grid */}
+                    <div className="col-span-8 flex flex-col justify-between bg-slate-900/40 rounded-2xl border border-slate-800/60 p-6">
+                      <div>
+                        <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
+                          <h3 className="text-sm font-black uppercase font-mono text-blue-400 tracking-wider">
+                            STARTING XI ROSTER
+                          </h3>
+                          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                            <span>COACH:</span>
+                            <span className="text-white font-bold uppercase">
+                              {state.lineups.activeLineupView === 'away' ? state.lineups.awayCoach : state.lineups.homeCoach || 'Unassigned'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-2">
+                          {(state.lineups.activeLineupView === 'away' ? state.lineups.awayStartingXI : state.lineups.homeStartingXI).slice(0, state.lineups.rosterSize || 11).map((player: Player, idx: number) => {
+                            const isCap = player.isCaptain;
+                            return (
+                              <motion.div 
+                                key={player.id}
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.04 }}
+                                className={`flex items-center gap-3 border rounded-xl px-4 py-3 transition-colors ${
+                                  isCap 
+                                    ? 'bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/40 shadow-sm shadow-amber-500/5' 
+                                    : 'bg-slate-950/40 hover:bg-slate-950/80 border-slate-850'
+                                }`}
+                              >
+                                <span className={`text-sm font-mono font-black w-5 ${isCap ? 'text-amber-400' : 'text-blue-500'}`}>{player.number}</span>
+                                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded uppercase font-bold ${
+                                  isCap ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'
+                                }`}>{player.position}</span>
+                                <span className="text-sm font-bold text-white flex-1 truncate">{player.name}</span>
+                                {isCap && (
+                                  <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded font-mono uppercase tracking-wider animate-pulse">
+                                    C
+                                  </span>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-3">
+                          {state.lineups.activeLineupView === 'home' ? (
+                            state.settings.homeLogo && (
+                              isImageUrl(state.settings.homeLogo) ? (
+                                <img src={state.settings.homeLogo} alt="" className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900 object-cover" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span className="text-3xl leading-none flex items-center justify-center w-10 h-10">{state.settings.homeLogo}</span>
+                              )
+                            )
+                          ) : (
+                            state.settings.awayLogo && (
+                              isImageUrl(state.settings.awayLogo) ? (
+                                <img src={state.settings.awayLogo} alt="" className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900 object-cover" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span className="text-3xl leading-none flex items-center justify-center w-10 h-10">{state.settings.awayLogo}</span>
+                              )
+                            )
+                          )}
+                          <div>
+                            <span className="text-[10px] font-mono text-slate-400 block uppercase">TEAM CLUB</span>
+                            <span className="text-base font-black text-white block uppercase tracking-wide">
+                              {state.lineups.activeLineupView === 'away' ? state.settings.awayTeam : state.settings.homeTeam}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Side (Col span 4): Featured Team Captain Card */}
+                    {(() => {
+                      const activeRoster = (state.lineups.activeLineupView === 'away' ? state.lineups.awayStartingXI : state.lineups.homeStartingXI).slice(0, state.lineups.rosterSize || 11);
+                      const captain = activeRoster.find((p: Player) => p.isCaptain) || activeRoster.find((p: Player) => p.position === 'MF') || activeRoster[0];
+                      return (
+                        <div className="col-span-4 flex flex-col justify-between bg-gradient-to-b from-amber-500/10 via-slate-900/60 to-slate-900/90 rounded-2xl border border-amber-500/20 p-6 relative overflow-hidden shadow-2xl">
+                          {/* Decorative backdrop */}
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                          <div className="absolute -left-10 bottom-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                          <div className="flex flex-col items-center text-center mt-2">
+                            {/* Captain Badge */}
+                            <div className="px-3 py-1 bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full flex items-center gap-1.5 shadow-md shadow-amber-500/10 mb-6">
+                              <Trophy className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                              <span className="text-slate-950 text-[10px] font-black uppercase tracking-widest font-sans">
+                                Team Captain
+                              </span>
+                            </div>
+
+                            {/* Captain Portrait Frame */}
+                            <div className="relative mb-6">
+                              {/* Armband/Shield ornament */}
+                              <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-amber-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-950 shadow-md z-10 font-mono">
+                                C
+                              </div>
+                              <div className="w-40 h-40 rounded-full p-1 bg-gradient-to-tr from-amber-500 to-yellow-300 shadow-xl shadow-amber-500/10">
+                                <div className="w-full h-full rounded-full bg-slate-950 overflow-hidden relative border-4 border-slate-950">
+                                  {captain?.photoUrl ? (
+                                    <img 
+                                      src={captain.photoUrl} 
+                                      alt={captain.name} 
+                                      className="w-full h-full object-cover" 
+                                      referrerPolicy="no-referrer"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
+                                      <span className="text-4xl font-black">#{captain?.number}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Captain Info */}
+                            <span className="text-xs uppercase font-mono tracking-widest text-amber-400 font-bold">
+                              {captain?.position} • JERSEY #{captain?.number}
+                            </span>
+                            <h2 className="text-2xl font-black tracking-tight text-white mt-1 uppercase">
+                              {captain?.name || 'No Captain Designated'}
+                            </h2>
+                          </div>
+
+                          <div className="border-t border-slate-800/80 pt-4 mt-6 text-center">
+                            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                              LEADER ON THE PITCH
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
             </div>
           </motion.div>
         )}
@@ -1052,21 +1180,31 @@ export default function GraphicsOutput() {
       <AnimatePresence>
         {state.activeSponsor?.type && (
           <motion.div 
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 100 }}
-            className="absolute top-6 right-8 pointer-events-none"
+            initial={{ opacity: 0, scale: 0.8, x: 50 }}
+            animate={{ opacity: 1, scale: 1.15, x: 0 }}
+            exit={{ opacity: 0, scale: 0.8, x: 50 }}
+            className="absolute top-8 right-12 pointer-events-none z-50 origin-top-right"
             id="obs-sponsor-popup"
           >
-            <div className="bg-slate-950/95 border border-slate-800 rounded-xl px-4 py-2.5 shadow-xl flex items-center gap-3 w-80 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-1.5 h-full bg-blue-500" />
-              <div className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-lg shrink-0">
-                {state.activeSponsor.logoUrl || '⭐'}
+            <div className="bg-slate-950/95 border-2 border-blue-500/30 rounded-2xl px-6 py-4 flex items-center gap-4.5 w-100 shadow-2xl relative overflow-hidden backdrop-blur-md">
+              {/* Animated accent lights */}
+              <div className="absolute top-0 left-0 w-2 h-full bg-blue-500" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Sponsor Logo Panel */}
+              <div className="w-14 h-14 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
+                {isImageUrl(state.activeSponsor.logoUrl) ? (
+                  <img src={state.activeSponsor.logoUrl} alt="" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="text-3xl leading-none">{state.activeSponsor.logoUrl || '⭐'}</span>
+                )}
               </div>
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-[9px] uppercase font-mono tracking-widest text-slate-400 font-black">SPONSORED BY</span>
-                <span className="text-sm font-black text-white truncate leading-tight mt-0.5">{state.activeSponsor.sponsorName}</span>
-                <span className="text-[10px] text-blue-400 truncate mt-0.5 font-medium">{state.activeSponsor.promoText}</span>
+
+              {/* Sponsor details */}
+              <div className="flex flex-col overflow-hidden text-left">
+                <span className="text-[10px] uppercase font-mono tracking-[0.2em] text-blue-400 font-extrabold leading-none mb-1">OFFICIAL SPONSOR</span>
+                <span className="text-lg font-black text-white truncate leading-tight tracking-wide">{state.activeSponsor.sponsorName}</span>
+                <span className="text-xs text-slate-300 font-medium truncate mt-1 italic">{state.activeSponsor.promoText}</span>
               </div>
             </div>
           </motion.div>
@@ -1302,6 +1440,183 @@ export default function GraphicsOutput() {
                 {state.settings.leagueName} • {state.settings.location}
               </span>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------------------------------------------------- */}
+      {/* 11.7 WELCOME SCREEN WITH TOURNAMENT DETAILS */}
+      {/* ---------------------------------------------------- */}
+      <AnimatePresence>
+        {state.activeWelcome && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-slate-950/90 backdrop-blur-lg z-[90] flex items-center justify-center pointer-events-none"
+            id="obs-welcome-overlay"
+          >
+            {/* Ambient glowing orbs */}
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+            <motion.div
+              initial={{ scale: 0.9, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 18 }}
+              className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-10 max-w-3xl w-full flex flex-col items-center relative overflow-hidden shadow-2xl text-center"
+            >
+              {/* Light accent bar */}
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+
+              {/* Tournament Info Header */}
+              <div className="flex flex-col items-center gap-3 mb-6">
+                {state.settings.competitionLogo && (
+                  isImageUrl(state.settings.competitionLogo) ? (
+                    <img 
+                      src={state.settings.competitionLogo} 
+                      alt="" 
+                      className="w-20 h-20 object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]" 
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="text-5xl leading-none">{state.settings.competitionLogo}</span>
+                  )
+                )}
+                <div className="mt-2">
+                  <span className="text-blue-500 font-mono text-xs uppercase tracking-[0.25em] font-black block mb-1">
+                    LIVE BROADCAST PRE-SHOW
+                  </span>
+                  <h1 className="text-4xl font-black text-white tracking-wide uppercase">
+                    {state.settings.leagueName}
+                  </h1>
+                  <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest mt-1 block">
+                    {state.settings.season || '2026/2027'} EDITION
+                  </span>
+                </div>
+              </div>
+
+              {/* Matchup Banner */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl px-8 py-5 w-full flex items-center justify-between gap-6 my-4 shadow-inner">
+                {/* Home Team */}
+                <div className="flex items-center gap-3 flex-1 justify-end">
+                  <span className="text-lg font-black text-white uppercase tracking-tight truncate">{state.settings.homeTeam}</span>
+                  {state.settings.homeLogo && (
+                    isImageUrl(state.settings.homeLogo) ? (
+                      <img src={state.settings.homeLogo} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-800" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-2xl leading-none">{state.settings.homeLogo}</span>
+                    )
+                  )}
+                </div>
+
+                {/* VS Indicator */}
+                <div className="px-3.5 py-1.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-black font-mono tracking-widest uppercase">
+                  VS
+                </div>
+
+                {/* Away Team */}
+                <div className="flex items-center gap-3 flex-1 justify-start">
+                  {state.settings.awayLogo && (
+                    isImageUrl(state.settings.awayLogo) ? (
+                      <img src={state.settings.awayLogo} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-800" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-2xl leading-none">{state.settings.awayLogo}</span>
+                    )
+                  )}
+                  <span className="text-lg font-black text-white uppercase tracking-tight truncate">{state.settings.awayTeam}</span>
+                </div>
+              </div>
+
+              {/* Welcome text */}
+              <div className="my-6">
+                <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 uppercase tracking-tight animate-pulse">
+                  WELCOME TO THE MATCH
+                </span>
+                <p className="text-xs text-slate-400 mt-2 font-mono uppercase tracking-wider">
+                  The action is about to begin. Adjust your audio, sit back, and enjoy the coverage.
+                </p>
+              </div>
+
+              {/* Tournament Details Grid */}
+              <div className="grid grid-cols-3 divide-x divide-slate-850 gap-4 w-full border-t border-slate-800 pt-6 text-xs font-mono text-slate-400 mt-2">
+                <div className="px-2 text-center">
+                  <span className="text-[10px] text-slate-500 block uppercase mb-1">STADIUM VENUE</span>
+                  <span className="text-white font-bold">{state.settings.location}</span>
+                </div>
+                <div className="px-2 text-center">
+                  <span className="text-[10px] text-slate-500 block uppercase mb-1">KICKOFF TIME</span>
+                  <span className="text-white font-bold">{state.settings.kickoffTime}</span>
+                </div>
+                <div className="px-2 text-center">
+                  <span className="text-[10px] text-slate-500 block uppercase mb-1">MATCH REFEREE</span>
+                  <span className="text-white font-bold">{state.settings.referee}</span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------------------------------------------------- */}
+      {/* 13. ENDLESS SCROLLING NEWS TICKER (MOST IMPORTANT FEATURE) */}
+      {/* ---------------------------------------------------- */}
+      <AnimatePresence>
+        {state.activeTicker?.active && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className="absolute bottom-0 left-0 right-0 h-10 bg-slate-950/95 border-t border-slate-800 z-50 flex items-center overflow-hidden"
+            id="obs-ticker-overlay"
+          >
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes ticker-slide {
+                0% { transform: translate3d(0, 0, 0); }
+                100% { transform: translate3d(-33.33%, 0, 0); }
+              }
+              .ticker-sliding-content {
+                display: inline-flex;
+                white-space: nowrap;
+                animation: ticker-slide 20s linear infinite;
+              }
+            `}} />
+
+            {/* Static Label Tag on Left */}
+            <div className={`h-full px-5 flex items-center gap-2 z-10 font-sans text-xs font-black uppercase tracking-widest shrink-0 border-r shadow-lg shadow-black/40 ${
+              state.activeTicker.theme === 'breaking' 
+                ? 'bg-red-600 text-white border-red-500' 
+                : state.activeTicker.theme === 'sponsor' 
+                  ? 'bg-amber-500 text-slate-950 border-amber-400' 
+                  : 'bg-blue-600 text-white border-blue-500'
+            }`}>
+              <span className="w-2 h-2 rounded-full bg-current animate-ping" />
+              <span>
+                {state.activeTicker.theme === 'breaking' 
+                  ? 'BREAKING' 
+                  : state.activeTicker.theme === 'sponsor' 
+                    ? 'PROMO' 
+                    : 'UPDATES'}
+              </span>
+            </div>
+
+            {/* Endless sliding container */}
+            <div className="flex-1 overflow-hidden relative h-full flex items-center bg-slate-950">
+              <div className="ticker-sliding-content flex items-center gap-12 font-mono text-[11px] font-bold text-slate-200">
+                {/* Repeat the text 3 times to make sure it fills the screen for infinite loop */}
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-12 whitespace-nowrap">
+                    <span>{state.activeTicker.text}</span>
+                    <span className="text-blue-500">•</span>
+                    <span>{state.settings.leagueName.toUpperCase()} LIVE</span>
+                    <span className="text-blue-500">•</span>
+                    <span>{state.settings.homeTeam.toUpperCase()} VS {state.settings.awayTeam.toUpperCase()}</span>
+                    <span className="text-blue-500">★★</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layout, Activity, EyeOff, Sparkles, Share2, CreditCard, ArrowLeftRight, Tv2, Video } from 'lucide-react';
+import { Layout, Activity, EyeOff, Sparkles, Share2, CreditCard, ArrowLeftRight, Tv2, Video, Tv, Megaphone, Trophy } from 'lucide-react';
 import { BroadcastState, LowerThirdGraphic, VARGraphic } from '../types.js';
 
 interface OverlaysCategoryProps {
@@ -40,6 +40,29 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
   const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'facebook' | 'tiktok' | 'youtube' | 'custom' | null>(null);
   const [socialHandle, setSocialHandle] = useState('');
   const [socialText, setSocialText] = useState('');
+
+  // Welcome Screen and Scrolling News Ticker States
+  const [tickerText, setTickerText] = useState(state.activeTicker?.text || 'BREAKING NEWS: Welcome to the Z-raff Sports Live Broadcast Graphic Console! Fully interactive real-time control system is now live.');
+  const [tickerTheme, setTickerTheme] = useState(state.activeTicker?.theme || 'classic');
+
+  const toggleWelcomeScreen = () => {
+    updateState((prev) => ({
+      ...prev,
+      activeWelcome: !prev.activeWelcome,
+    }));
+  };
+
+  const updateTickerState = (activeVal: boolean) => {
+    updateState((prev) => ({
+      ...prev,
+      activeTicker: {
+        active: activeVal,
+        text: tickerText || 'Welcome to the Live Broadcast!',
+        speed: 'medium',
+        theme: tickerTheme,
+      }
+    }));
+  };
 
   const triggerLowerThird = () => {
     updateState((prev) => ({
@@ -859,6 +882,111 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
             <Video className="w-4 h-4 fill-current" /> 
             {state.activeReplay ? 'STINGER ACTIVE ON-AIR' : 'TRIGGER STINGER TRANSITION'}
           </button>
+        </div>
+
+        {/* 11.7 TOURNAMENT WELCOME SCREEN CONTROLLER */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Tv className="w-5 h-5 text-blue-400" />
+                <h2 className="text-base font-black text-white">Cinematic Welcome Screen</h2>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase ${
+                state.activeWelcome 
+                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' 
+                  : 'bg-slate-950 text-slate-500 border border-slate-850'
+              }`}>
+                {state.activeWelcome ? 'ON AIR' : 'OFF AIR'}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed mb-4">
+              Launches a full-screen, highly polished introduction overlay highlighting the tournament name, logos, stadium venue, and matchup details. Ideal for pre-shows and half-time transitions.
+            </p>
+          </div>
+
+          <button 
+            onClick={toggleWelcomeScreen}
+            className={`w-full py-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase font-sans tracking-wider ${
+              state.activeWelcome 
+                ? 'bg-red-600 hover:bg-red-500 text-white' 
+                : 'bg-blue-600 hover:bg-blue-500 text-white'
+            }`}
+            id="btn-overlays-welcome-toggle"
+          >
+            <Tv className="w-4 h-4" />
+            {state.activeWelcome ? 'REMOVE WELCOME SCREEN' : 'GO ON-AIR WITH WELCOME'}
+          </button>
+        </div>
+
+        {/* 13. ENDLESS SCROLLING TICKER CONTROLLER */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between md:col-span-2">
+          <div>
+            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-amber-400" />
+                <h2 className="text-base font-black text-white">Bottom Scrolling News Ticker</h2>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase ${
+                state.activeTicker?.active 
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' 
+                  : 'bg-slate-950 text-slate-500 border border-slate-850'
+              }`}>
+                {state.activeTicker?.active ? 'ON AIR' : 'OFF AIR'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="md:col-span-2 flex flex-col">
+                <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Ticker Announcement Text</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter updates, news alerts, or promotional announcements..." 
+                  value={tickerText}
+                  onChange={(e) => setTickerText(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white font-mono"
+                  id="overlays-ticker-text"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Ticker Theme Preset</label>
+                <select 
+                  value={tickerTheme}
+                  onChange={(e) => setTickerTheme(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white"
+                  id="overlays-ticker-theme"
+                >
+                  <option value="classic">Default Updates (Blue tag)</option>
+                  <option value="breaking">Breaking News (Red flashing tag)</option>
+                  <option value="sponsor">Sponsor Promotion (Amber promo tag)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button 
+              onClick={() => updateTickerState(true)}
+              className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase font-sans tracking-wider"
+              id="btn-overlays-ticker-activate"
+            >
+              <Sparkles className="w-4 h-4 fill-current" />
+              Activate / Update Ticker
+            </button>
+
+            {state.activeTicker?.active && (
+              <button 
+                onClick={() => updateTickerState(false)}
+                className="px-5 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase font-sans tracking-wide"
+                id="btn-overlays-ticker-hide"
+              >
+                <EyeOff className="w-4 h-4" />
+                Hide
+              </button>
+            )}
+          </div>
         </div>
 
       </div>

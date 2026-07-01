@@ -5,6 +5,8 @@ export interface Player {
   position: 'GK' | 'DF' | 'MF' | 'FW';
   x?: number; // 0-100 position on tactical pitch
   y?: number; // 0-100 position on tactical pitch
+  isCaptain?: boolean;
+  photoUrl?: string;
 }
 
 export type TimerPeriod = '1ST' | '2ND' | 'OT1' | 'OT2' | 'PEN' | 'FT';
@@ -44,6 +46,7 @@ export interface LineupState {
   homeSubs: Player[];
   awaySubs: Player[];
   activeLineupView: 'home' | 'away' | 'vs' | null;
+  rosterSize?: number;
 }
 
 export interface SubstitutionGraphic {
@@ -145,6 +148,13 @@ export interface BroadcastState {
   activeWinnerAnnounce?: {
     winner: 'home' | 'away' | 'draw' | null;
     customTitle?: string;
+  } | null;
+  activeWelcome?: boolean;
+  activeTicker?: {
+    active: boolean;
+    text: string;
+    speed?: 'slow' | 'medium' | 'fast';
+    theme?: 'classic' | 'breaking' | 'sponsor';
   } | null;
   updatedAt?: number;
 }

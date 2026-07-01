@@ -18,7 +18,7 @@ const defaultHomeXI: Player[] = [
   { id: 'h4', name: 'Gabriel Magalhães', number: 6, position: 'DF', x: 30, y: 62 },
   { id: 'h5', name: 'Oleksandr Zinchenko', number: 35, position: 'DF', x: 30, y: 85 },
   { id: 'h6', name: 'Declan Rice', number: 41, position: 'MF', x: 55, y: 30 },
-  { id: 'h7', name: 'Martin Ødegaard', number: 8, position: 'MF', x: 55, y: 70 },
+  { id: 'h7', name: 'Martin Ødegaard', number: 8, position: 'MF', x: 55, y: 70, isCaptain: true, photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200' },
   { id: 'h8', name: 'Bukayo Saka', number: 7, position: 'MF', x: 75, y: 15 },
   { id: 'h9', name: 'Gabriel Martinelli', number: 11, position: 'MF', x: 75, y: 85 },
   { id: 'h10', name: 'Kai Havertz', number: 29, position: 'FW', x: 80, y: 50 },
@@ -36,7 +36,7 @@ const defaultHomeSubs: Player[] = [
 
 const defaultAwayXI: Player[] = [
   { id: 'a1', name: 'Robert Sánchez', number: 1, position: 'GK', x: 10, y: 50 },
-  { id: 'a2', name: 'Reece James', number: 24, position: 'DF', x: 30, y: 15 },
+  { id: 'a2', name: 'Reece James', number: 24, position: 'DF', x: 30, y: 15, isCaptain: true, photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200' },
   { id: 'a3', name: 'Axel Disasi', number: 2, position: 'DF', x: 30, y: 38 },
   { id: 'a4', name: 'Levi Colwill', number: 26, position: 'DF', x: 30, y: 62 },
   { id: 'a5', name: 'Marc Cucurella', number: 3, position: 'DF', x: 30, y: 85 },
@@ -90,6 +90,7 @@ export const DEFAULT_STATE: BroadcastState = {
     homeSubs: defaultHomeSubs,
     awaySubs: defaultAwaySubs,
     activeLineupView: null,
+    rosterSize: 11,
   },
   stats: {
     possessionHome: 0,
@@ -133,6 +134,13 @@ export const DEFAULT_STATE: BroadcastState = {
   hideTimer: false,
   scoreboardStyle: 'classic',
   activeWinnerAnnounce: null,
+  activeWelcome: false,
+  activeTicker: {
+    active: false,
+    text: 'BREAKING NEWS: Welcome to the Z-raff Sports Live Broadcast Graphic Console! Fully interactive real-time control system is now live.',
+    speed: 'medium',
+    theme: 'classic'
+  },
 };
 
 export function useBroadcast() {
