@@ -144,10 +144,13 @@ export const DEFAULT_STATE: BroadcastState = {
 };
 
 const getDeterministicSyncKey = (): string => {
-  if (typeof window === 'undefined') return 'zraff-sports-global-sync';
-  const host = window.location.hostname || 'localhost';
-  const cleaned = host.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-  return `zraff-sports-${cleaned}`;
+  return 'zraff-sports-global-sync';
+};
+
+const isLocalBackendSupported = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host.includes('.run.app') || host.includes('localhost');
 };
 
 export function useBroadcast() {
@@ -304,6 +307,11 @@ export function useBroadcast() {
 
   // Connect to live WebSocket if available
   const connect = useCallback(() => {
+    if (!isLocalBackendSupported()) {
+      setIsWsConnected(false);
+      return;
+    }
+
     if (socketRef.current) {
       try {
         socketRef.current.onclose = null;
@@ -446,6 +454,11 @@ export function useBroadcast() {
 
   // HTTP polling fallback when WebSocket is not connected or fails
   useEffect(() => {
+    if (!isLocalBackendSupported()) {
+      setIsRestConnected(false);
+      return;
+    }
+
     if (isWsConnected) {
       setIsRestConnected(false);
       return;
