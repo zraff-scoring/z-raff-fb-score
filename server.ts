@@ -71,7 +71,10 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     console.log('[Dev] Initializing Vite middleware mode...');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === 'true' ? false : { server }
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
