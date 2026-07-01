@@ -159,8 +159,10 @@ const getSocket = (): Socket | null => {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 20000,
+      timeout: 15000,
       autoConnect: true,
+      transports: ['polling', 'websocket'], // Start with HTTP polling to bypass aggressive proxy firewalls, then upgrade to WebSocket
+      withCredentials: true,
     });
   }
   return socketInstance;
@@ -351,9 +353,18 @@ export function useBroadcast() {
       }
     };
 
-    const onDisconnect = () => {
-      console.log('[Socket] Disconnected from WebSocket Server');
+    const onDisconnect = (reason: string) => {
+      console.log('[Socket] Disconnected from WebSocket Server. Reason:', reason);
       setIsConnected(false);
+    };
+
+    const onConnectError = (error: Error) => {
+      console.error('[Socket] Connection error occurred:', error.message, error);
+      setIsConnected(false);
+    };
+
+    const onReconnectAttempt = (attemptNumber: number) => {
+      console.log(`[Socket] Reconnection attempt #${attemptNumber} in progress...`);
     };
 
     const onStateUpdate = (serverState: BroadcastState) => {
@@ -377,6 +388,8 @@ export function useBroadcast() {
 
     s.on('connect', onConnect);
     s.on('disconnect', onDisconnect);
+    s.on('connect_error', onConnectError);
+    s.on('reconnect_attempt', onReconnectAttempt);
     s.on('STATE_UPDATE', onStateUpdate);
     s.on('TRIGGER_REPLAY', onTriggerReplay);
     s.on('CLEAR_OVERLAYS', onClearOverlays);
@@ -389,6 +402,8 @@ export function useBroadcast() {
     return () => {
       s.off('connect', onConnect);
       s.off('disconnect', onDisconnect);
+      s.off('connect_error', onConnectError);
+      s.off('reconnect_attempt', onReconnectAttempt);
       s.off('STATE_UPDATE', onStateUpdate);
       s.off('TRIGGER_REPLAY', onTriggerReplay);
       s.off('CLEAR_OVERLAYS', onClearOverlays);

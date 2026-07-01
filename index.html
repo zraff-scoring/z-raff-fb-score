@@ -4,6 +4,104 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Football Live Scoring & OBS Broadcast Control Panel</title>
+    <script>
+      // Highly resilient HMR and WebSocket Shield
+      // This runs early to mock development-only HMR sockets and handle unhandled rejections
+      (function() {
+        if (typeof window !== 'undefined') {
+          // 1. Unhandled rejection & general error silencer for HMR / Vite
+          const isHmrError = (msg) => {
+            return (
+              msg && (
+                msg.includes('WebSocket') ||
+                msg.includes('vite') ||
+                msg.includes('closed without opened') ||
+                msg.includes('HMR') ||
+                msg.includes('hmr')
+              )
+            );
+          };
+
+          window.addEventListener('unhandledrejection', function(event) {
+            const msg = event.reason?.message || String(event.reason || '');
+            if (isHmrError(msg)) {
+              console.warn('[HMR Shield Caught Rejection]:', msg);
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          }, true);
+
+          window.addEventListener('error', function(event) {
+            const msg = event.message || '';
+            if (isHmrError(msg)) {
+              console.warn('[HMR Shield Caught Error]:', msg);
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          }, true);
+
+          // 2. Intercept window.WebSocket to mock non-Socket.IO (Vite HMR) websockets
+          const OriginalWebSocket = window.WebSocket;
+          if (OriginalWebSocket) {
+            window.WebSocket = function(url, protocols) {
+              const urlStr = String(url);
+              // If the websocket URL is for Vite or not Socket.IO, we mock it to prevent connection failure errors
+              if (urlStr.includes('vite') || urlStr.includes('hmr') || (!urlStr.includes('socket.io') && urlStr.includes('ais-dev'))) {
+                console.log('[HMR-Shield] Intercepting Vite HMR WebSocket connection to:', urlStr);
+                
+                const fakeWs = {
+                  url: urlStr,
+                  readyState: 0, // CONNECTING
+                  bufferedAmount: 0,
+                  extensions: '',
+                  protocol: '',
+                  binaryType: 'blob',
+                  onopen: null,
+                  onmessage: null,
+                  onerror: null,
+                  onclose: null,
+                  addEventListener: function(type, listener) {
+                    if (type === 'open') {
+                      setTimeout(() => {
+                        this.readyState = 1; // OPEN
+                        if (this.onopen) this.onopen();
+                        const event = new Event('open');
+                        if (listener) listener(event);
+                      }, 50);
+                    } else if (type === 'close') {
+                      this.onclose_listener = listener;
+                    }
+                  },
+                  removeEventListener: function() {},
+                  send: function() {},
+                  close: function() {
+                    this.readyState = 3; // CLOSED
+                    if (this.onclose) this.onclose();
+                    if (this.onclose_listener) this.onclose_listener(new Event('close'));
+                  }
+                };
+                return fakeWs;
+              }
+              // Normal connection for real WebSockets (Socket.IO)
+              return new OriginalWebSocket(url, protocols);
+            };
+
+            // Restore all static constants on the WebSocket constructor
+            Object.getOwnPropertyNames(OriginalWebSocket).forEach(function(key) {
+              if (!(key in window.WebSocket)) {
+                try {
+                  Object.defineProperty(window.WebSocket, key, {
+                    value: OriginalWebSocket[key],
+                    writable: false,
+                    configurable: true
+                  });
+                } catch (e) {}
+              }
+            });
+          }
+        }
+      })();
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-100">
     <div id="root"></div>
