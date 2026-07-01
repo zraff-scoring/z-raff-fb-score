@@ -143,6 +143,13 @@ export const DEFAULT_STATE: BroadcastState = {
   },
 };
 
+const getDeterministicSyncKey = (): string => {
+  if (typeof window === 'undefined') return 'zraff-sports-global-sync';
+  const host = window.location.hostname || 'localhost';
+  const cleaned = host.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  return `zraff-sports-${cleaned}`;
+};
+
 export function useBroadcast() {
   // Initialize from LocalStorage if available, fallback to DEFAULT_STATE
   const [state, setState] = useState<BroadcastState>(() => {
@@ -176,7 +183,7 @@ export function useBroadcast() {
 
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(true);
 
-  const [syncKey, setSyncKey] = useState<string>('zraff-sports-global-sync');
+  const [syncKey, setSyncKey] = useState<string>(getDeterministicSyncKey);
 
   // Sync state helper to both local state & local storage safely
   const setAndPersistState = useCallback((next: BroadcastState) => {

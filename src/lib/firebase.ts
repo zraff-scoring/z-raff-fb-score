@@ -81,43 +81,61 @@ const envConfig: FirebaseConfig = {
   firestoreDatabaseId: cleanEnvVar(import.meta.env.VITE_FIREBASE_DATABASE_ID),
 };
 
+const hardcodedConfig: FirebaseConfig = {
+  apiKey: 'AIzaSyCrfNeE0qOy6RbBxa3AjkRJyq3rSj4FLV0',
+  authDomain: 'gen-lang-client-0534194369.firebaseapp.com',
+  projectId: 'gen-lang-client-0534194369',
+  storageBucket: 'gen-lang-client-0534194369.firebasestorage.app',
+  messagingSenderId: '969144181415',
+  appId: '1:969144181415:web:3abdfe7eb2f913401d7182',
+  firestoreDatabaseId: 'ai-studio-zraffsportsgraph-84e8ca8c-f37e-417c-b065-a4d888812ea9',
+};
+
 // Check if we have valid environment config
 const hasEnvConfig = !!(envConfig.apiKey && envConfig.authDomain && envConfig.projectId);
 
 export async function initFirebase(): Promise<{ auth: Auth | null; db: Firestore | null; storage: FirebaseStorage | null; googleProvider: GoogleAuthProvider | null; isMock: boolean }> {
   if (auth || db || isMock) return { auth, db, storage, googleProvider, isMock };
 
-  console.log('[Firebase Init] hasEnvConfig:', hasEnvConfig, 'envConfig:', {
-    ...envConfig,
-    apiKey: envConfig.apiKey ? '***' + envConfig.apiKey.slice(-5) : '',
-  });
+  let configToUse = envConfig;
+  let configType = 'env variables';
 
   if (hasEnvConfig) {
-    try {
-      if (getApps().length === 0) {
-        app = initializeApp(envConfig);
-      } else {
-        app = getApp();
-      }
-      auth = getAuth(app);
-      db = initializeFirestore(app, {
-        experimentalForceLongPolling: true,
-      }, envConfig.firestoreDatabaseId || undefined);
-      try {
-        storage = getStorage(app);
-      } catch (err) {
-        console.error('Failed to initialize Storage:', err);
-      }
-      googleProvider = new GoogleAuthProvider();
-      googleProvider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      isMock = false;
-      console.log('Firebase initialized successfully via env variables.');
-      return { auth, db, storage, googleProvider, isMock };
-    } catch (e) {
-      console.error('Failed to initialize Firebase with env config, trying fetch...', e);
+    configToUse = envConfig;
+  } else {
+    configToUse = hardcodedConfig;
+    configType = 'static hardcoded configuration';
+  }
+
+  console.log('[Firebase Init] Initializing via:', configType, 'config:', {
+    ...configToUse,
+    apiKey: configToUse.apiKey ? '***' + configToUse.apiKey.slice(-5) : '',
+  });
+
+  try {
+    if (getApps().length === 0) {
+      app = initializeApp(configToUse);
+    } else {
+      app = getApp();
     }
+    auth = getAuth(app);
+    db = initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+    }, configToUse.firestoreDatabaseId || undefined);
+    try {
+      storage = getStorage(app);
+    } catch (err) {
+      console.error('Failed to initialize Storage:', err);
+    }
+    googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    isMock = false;
+    console.log(`Firebase initialized successfully via ${configType}.`);
+    return { auth, db, storage, googleProvider, isMock };
+  } catch (e) {
+    console.error(`Failed to initialize Firebase with ${configType}, trying fetch fallback...`, e);
   }
 
   // Fallback: Try to fetch firebase-applet-config.json from the root
