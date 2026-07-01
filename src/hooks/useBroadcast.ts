@@ -181,7 +181,7 @@ export function useBroadcast() {
   // Sync state helper to both local state & local storage safely
   const setAndPersistState = useCallback((next: BroadcastState) => {
     setState((prev) => {
-      if (prev && prev.updatedAt && next && next.updatedAt && next.updatedAt < prev.updatedAt) {
+      if (isController && prev && prev.updatedAt && next && next.updatedAt && next.updatedAt < prev.updatedAt) {
         return prev;
       }
       try {
@@ -191,7 +191,7 @@ export function useBroadcast() {
       }
       return next;
     });
-  }, []);
+  }, [isController]);
 
   // Fetch initial state via REST API on load to override with live server values if running
   useEffect(() => {
@@ -625,6 +625,9 @@ export function useBroadcast() {
         }
       };
 
+      // ALWAYS run secondary ntfy.sh SSE connection in parallel to guarantee zero-downtime, sandboxed OBS Browser Source syncing
+      connectSse();
+
       if (!isFirebaseMock && firestoreDb) {
         console.log('Establishing Firestore real-time listener for syncKey:', syncKey);
         try {
@@ -672,25 +675,16 @@ export function useBroadcast() {
               }
             }
           }, (err) => {
-            console.error('Firestore real-time subscription error (falling back to ntfy SSE):', err);
+            console.error('Firestore real-time subscription error:', err);
             try {
               handleFirestoreError(err, OperationType.GET, `broadcast_states/${syncKey}`);
             } catch (thrownErr) {
               // Captured error, fallback gracefully
             }
-            if (active) {
-              connectSse();
-            }
           });
         } catch (err) {
-          console.error('Failed to setup Firestore listener (falling back to ntfy SSE):', err);
-          if (active) {
-            connectSse();
-          }
+          console.error('Failed to setup Firestore listener:', err);
         }
-      } else {
-        console.log('Establishing SSE ntfy.sh fallback listener for syncKey:', syncKey);
-        connectSse();
       }
     };
 
