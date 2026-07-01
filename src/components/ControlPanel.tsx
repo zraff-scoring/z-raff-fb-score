@@ -40,9 +40,7 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
 
   const getOverlayUrl = () => {
     if (typeof window === 'undefined') return '/output';
-    return syncKey
-      ? `${window.location.origin}/output?syncKey=${syncKey}`
-      : `${window.location.origin}/output`;
+    return `${window.location.origin}/output`;
   };
 
   const handleCopyLink = () => {
@@ -193,26 +191,10 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
 
           <div className="flex items-center gap-2 self-stretch md:self-auto justify-end">
             <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Cloud Sync:</span>
-            <button
-              onClick={() => setCloudSyncEnabled(!cloudSyncEnabled)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border cursor-pointer ${
-                cloudSyncEnabled
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-sm shadow-emerald-500/5'
-                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-300'
-              }`}
-            >
-              {cloudSyncEnabled ? (
-                <>
-                  <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                  <span>Enabled (ntfy.sh)</span>
-                </>
-              ) : (
-                <>
-                  <CloudOff className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Disabled (Local WS)</span>
-                </>
-              )}
-            </button>
+            <div className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm shadow-emerald-500/5 flex items-center gap-1.5">
+              <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span>PERMANENT ACTIVE</span>
+            </div>
           </div>
         </div>
 
@@ -254,23 +236,9 @@ export default function ControlPanel({ onLock }: ControlPanelProps) {
               <span className="text-amber-500 font-bold uppercase">⚡ Cloud Sync Active:</span>
               <span>Your OBS source will receive score/timer updates in real-time across different browsers/computers!</span>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0 bg-slate-900 border border-slate-850 py-1 px-2.5 rounded-lg">
-              <span className="text-[9px] text-slate-500 uppercase font-black">Sync Key:</span>
+            <div className="flex items-center gap-1.5 shrink-0 bg-slate-900 border border-slate-850 py-1.5 px-3 rounded-lg">
+              <span className="text-[9px] text-slate-500 uppercase font-black mr-1">Sync Key:</span>
               <span className="text-blue-400 font-bold select-all">{syncKey}</span>
-              <button
-                onClick={() => {
-                  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-                  let newKey = 'zraff-sync-';
-                  for (let i = 0; i < 8; i++) {
-                    newKey += chars.charAt(Math.floor(Math.random() * chars.length));
-                  }
-                  setSyncKey(newKey);
-                }}
-                className="ml-1 text-slate-500 hover:text-white p-0.5 rounded cursor-pointer"
-                title="Regenerate Sync Key"
-              >
-                <RefreshCw className="w-3 h-3" />
-              </button>
             </div>
           </div>
         )}

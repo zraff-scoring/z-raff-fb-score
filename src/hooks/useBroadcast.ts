@@ -174,59 +174,9 @@ export function useBroadcast() {
 
   const isController = typeof window !== 'undefined' && !window.location.pathname.includes('/output');
 
-  const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('syncKey')) {
-          return true;
-        }
-        const host = window.location.hostname;
-        if (
-          host !== 'localhost' && 
-          host !== '127.0.0.1' && 
-          host !== '' && 
-          !host.startsWith('192.168.') && 
-          !host.startsWith('10.')
-        ) {
-          return true;
-        }
-      }
-      const saved = localStorage.getItem('cloud_sync_enabled');
-      if (saved) {
-        return saved === 'true';
-      }
-    } catch (e) {
-      // Ignore
-    }
-    return false;
-  });
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(true);
 
-  const [syncKey, setSyncKey] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlSyncKey = urlParams.get('syncKey');
-      if (urlSyncKey) {
-        return urlSyncKey;
-      }
-      try {
-        const savedKey = localStorage.getItem('cloud_sync_key');
-        if (savedKey) {
-          return savedKey;
-        }
-        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        let newKey = 'zraff-sync-';
-        for (let i = 0; i < 8; i++) {
-          newKey += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        localStorage.setItem('cloud_sync_key', newKey);
-        return newKey;
-      } catch (e) {
-        // Ignore
-      }
-    }
-    return '';
-  });
+  const [syncKey, setSyncKey] = useState<string>('zraff-sports-global-sync');
 
   // Sync state helper to both local state & local storage safely
   const setAndPersistState = useCallback((next: BroadcastState) => {
