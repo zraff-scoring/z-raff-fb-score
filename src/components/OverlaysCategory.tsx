@@ -863,34 +863,6 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
           </button>
         </div>
 
-        {/* OBS STINGER TRANSITIONS & VIDEO REPLAYS */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3">
-              <Video className="w-5 h-5 text-red-500 animate-pulse" />
-              <h2 className="text-base font-black text-white">OBS Replay Stinger</h2>
-            </div>
-
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Launches an instant motion-graphic wipe across the live OBS Browser output. Builds excitement during dynamic reviews or action highlights.
-            </p>
-          </div>
-
-          <button 
-            onClick={triggerReplay}
-            disabled={state.activeReplay}
-            className={`w-full py-4 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
-              state.activeReplay 
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-                : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/10'
-            }`}
-            id="btn-overlays-stinger"
-          >
-            <Video className="w-4 h-4 fill-current" /> 
-            {state.activeReplay ? 'STINGER ACTIVE ON-AIR' : 'TRIGGER STINGER TRANSITION'}
-          </button>
-        </div>
-
         {/* 11.7 TOURNAMENT WELCOME SCREEN CONTROLLER */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
           <div>

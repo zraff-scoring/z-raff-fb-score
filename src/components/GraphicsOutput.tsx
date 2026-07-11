@@ -1741,41 +1741,6 @@ export default function GraphicsOutput() {
         )}
       </AnimatePresence>
 
-      {/* ---------------------------------------------------- */}
-      {/* 12. FULL SCREEN REPLAY TRANSITION OVERLAY */}
-      {/* ---------------------------------------------------- */}
-      <AnimatePresence>
-        {replayActive && (
-          <motion.div 
-            initial={{ clipPath: 'polygon(0% 0%, 0% 0%, 0% 100%, 0% 100%)' }}
-            animate={{ clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' }}
-            exit={{ clipPath: 'polygon(100% 0%, 100% 0%, 100% 100%, 100% 100%)' }}
-            transition={{ duration: 0.6, ease: 'easeInOut' }}
-            className="absolute inset-0 bg-blue-900 z-50 flex flex-col items-center justify-center"
-            id="obs-replay-transition"
-          >
-            <motion.div 
-              initial={{ scale: 0.2, rotate: -180, opacity: 0 }}
-              animate={{ scale: 1, rotate: 0, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.4 }}
-              className="flex flex-col items-center"
-            >
-              <div className="w-28 h-28 bg-white text-blue-900 rounded-full flex items-center justify-center shadow-2xl mb-4 border-4 border-blue-400">
-                <Trophy className="w-14 h-14" />
-              </div>
-              <h1 className="text-4xl font-black uppercase text-white tracking-widest">
-                Z-raff Sports
-              </h1>
-              <div className="px-4 py-1 bg-blue-950/80 rounded-full border border-blue-800 mt-2">
-                <span className="text-blue-400 font-mono text-xs font-bold uppercase tracking-widest">
-                  Instant Replay
-                </span>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
     </div>
   );
 }
