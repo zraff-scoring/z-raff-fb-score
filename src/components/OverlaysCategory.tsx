@@ -45,6 +45,8 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
   const [tickerText, setTickerText] = useState(state.activeTicker?.text || 'BREAKING NEWS: Welcome to the Z-raff Sports Live Broadcast Graphic Console! Fully interactive real-time control system is now live.');
   const [tickerTheme, setTickerTheme] = useState(state.activeTicker?.theme || 'classic');
 
+  const liveMatchMinute = Math.floor(state.timer.timeSeconds / 60) + 1;
+
   const toggleWelcomeScreen = () => {
     updateState((prev) => ({
       ...prev,
@@ -113,6 +115,8 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
         }
       }
 
+      const calculatedMinute = Math.floor(prev.timer.timeSeconds / 60) + 1;
+
       return {
         ...prev,
         stats: nextStats,
@@ -120,7 +124,7 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
           team: cardTeam,
           player: cardPlayer || 'Unidentified Player',
           cardType,
-          minute: cardMinute,
+          minute: calculatedMinute,
         }
       };
     });
@@ -131,15 +135,18 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
   };
 
   const triggerSubPopup = () => {
-    updateState((prev) => ({
-      ...prev,
-      activeSubstitution: {
-        team: subTeam,
-        playerIn: subPlayerIn || 'Sub In',
-        playerOut: subPlayerOut || 'Sub Out',
-        minute: subMinute,
-      }
-    }));
+    updateState((prev) => {
+      const calculatedMinute = Math.floor(prev.timer.timeSeconds / 60) + 1;
+      return {
+        ...prev,
+        activeSubstitution: {
+          team: subTeam,
+          playerIn: subPlayerIn || 'Sub In',
+          playerOut: subPlayerOut || 'Sub Out',
+          minute: calculatedMinute,
+        }
+      };
+    });
 
     setTimeout(() => {
       updateState((prev) => ({ ...prev, activeSubstitution: null }));
@@ -161,7 +168,7 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
       ...prev,
       activeSponsor: {
         type: sponsorType,
-        logoUrl: sponsorLogo || '⭐',
+        logoUrl: sponsorLogo || '',
         sponsorName: sponsorName || 'Sponsor Name',
         promoText: sponsorText || 'Promo Text Details',
       }
@@ -296,9 +303,9 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
             {/* Possession */}
             <div className="flex flex-col">
               <div className="flex justify-between text-xs font-mono font-bold text-slate-400 mb-1.5">
-                <span>{state.settings.homeTeam.substring(0, 3).toUpperCase()}: {state.stats.possessionHome}%</span>
+                <span>{state.settings.homeTeamShort}: {state.stats.possessionHome}%</span>
                 <span className="uppercase text-[10px] tracking-wider font-sans">Ball Possession</span>
-                <span>{state.settings.awayTeam.substring(0, 3).toUpperCase()}: {100 - state.stats.possessionHome}%</span>
+                <span>{state.settings.awayTeamShort}: {100 - state.stats.possessionHome}%</span>
               </div>
               <input 
                 type="range" 
@@ -518,14 +525,14 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
                   </select>
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Minute</label>
-                  <input 
-                    type="number" 
-                    value={cardMinute}
-                    onChange={(e) => setCardMinute(parseInt(e.target.value) || 0)}
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 w-full text-white font-mono"
-                    id="cards-minute"
-                  />
+                  <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Minute (Synced)</label>
+                  <div className="bg-slate-950 border border-slate-800 text-amber-400 font-mono font-black text-xs rounded-xl px-3 py-1.5 flex items-center justify-between shadow-inner h-[30px] select-none">
+                    <span>{liveMatchMinute}'</span>
+                    <span className="text-[9px] text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                      Live Sync
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -601,14 +608,14 @@ export default function OverlaysCategory({ state, updateState, triggerReplay }: 
               </div>
 
               <div className="flex flex-col">
-                <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Match Minute</label>
-                <input 
-                  type="number" 
-                  value={subMinute}
-                  onChange={(e) => setSubMinute(parseInt(e.target.value) || 0)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 w-full text-white font-mono"
-                  id="subs-minute"
-                />
+                <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Match Minute (Synced)</label>
+                <div className="bg-slate-950 border border-slate-800 text-amber-400 font-mono font-black text-xs rounded-xl px-3 py-1.5 flex items-center justify-between shadow-inner h-[30px] select-none">
+                  <span>{liveMatchMinute}'</span>
+                  <span className="text-[9px] text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                    Live Sync
+                  </span>
+                </div>
               </div>
             </div>
           </div>

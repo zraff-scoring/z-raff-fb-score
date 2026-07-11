@@ -68,6 +68,18 @@ export default function TimerCategory({ state, updateState }: TimerCategoryProps
     }));
   };
 
+  // Set custom timer status
+  const setCustomTimerStatus = (status: string | null) => {
+    updateState((prev) => ({
+      ...prev,
+      timer: { 
+        ...prev.timer, 
+        customStatus: status,
+        isRunning: status ? false : prev.timer.isRunning
+      }
+    }));
+  };
+
   const handleResetMatchClock = () => {
     updateState((prev) => ({
       ...prev,
@@ -75,7 +87,8 @@ export default function TimerCategory({ state, updateState }: TimerCategoryProps
         timeSeconds: 0,
         isRunning: false,
         period: '1ST',
-        injuryTimeMinutes: 0
+        injuryTimeMinutes: 0,
+        customStatus: null
       }
     }));
   };
@@ -101,6 +114,25 @@ export default function TimerCategory({ state, updateState }: TimerCategoryProps
         }`}>
           {state.timer.isRunning ? '● RUNNING' : '○ PAUSED'}
         </span>
+      </div>
+
+      {/* TIMER VISIBILITY CONTROL */}
+      <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 mb-6 flex items-center justify-between">
+        <div>
+          <span className="text-xs font-bold text-white block">Timer HUD Visibility</span>
+          <span className="text-[10px] text-slate-400">Toggle whether the timer is visible or hidden on screen</span>
+        </div>
+        <button
+          onClick={() => updateState(prev => ({ ...prev, hideTimer: !prev.hideTimer }))}
+          className={`px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer min-w-[120px] ${
+            state.hideTimer 
+              ? 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/10' 
+              : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/10'
+          }`}
+          id="btn-toggle-timer-visibility"
+        >
+          {state.hideTimer ? 'HIDDEN' : 'VISIBLE'}
+        </button>
       </div>
 
       <div className="flex flex-col md:flex-row items-center gap-6 mb-6">
@@ -229,6 +261,58 @@ export default function TimerCategory({ state, updateState }: TimerCategoryProps
               {p}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* MATCH PERIOD STATUS OVERRIDES */}
+      <div className="border-t border-slate-800 pb-5 pt-4">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-black">
+              Match Period Status Overrides (Hides clock numbers)
+            </span>
+            <span className="text-xs text-slate-500">
+              Select a status to hide the clock numbers and show the phase on both scoreboards.
+            </span>
+          </div>
+          {state.timer.customStatus && (
+            <span className="px-2.5 py-1 text-[10px] font-black rounded-lg font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/25 animate-pulse">
+              Active: {state.timer.customStatus}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {[
+            { label: 'Half Time', value: 'HALF TIME' },
+            { label: 'Full Time', value: 'FULL TIME' },
+            { label: 'Extra HT', value: 'EXTRA HALF TIME' },
+            { label: 'Extra FT', value: 'EXTRA FULL TIME' },
+          ].map((item) => (
+            <button
+              key={item.value}
+              onClick={() => setCustomTimerStatus(item.value)}
+              className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                state.timer.customStatus === item.value 
+                  ? 'bg-yellow-500 text-slate-950 font-black shadow-md shadow-yellow-500/15' 
+                  : 'bg-slate-850 text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+              }`}
+              id={`btn-timer-status-${item.value.replace(/\s+/g, '-').toLowerCase()}`}
+            >
+              {item.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setCustomTimerStatus(null)}
+            disabled={!state.timer.customStatus}
+            className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              !state.timer.customStatus 
+                ? 'bg-slate-900/40 text-slate-600 border border-slate-800/40 cursor-not-allowed' 
+                : 'bg-red-950/40 border border-red-900/40 text-red-400 hover:bg-red-900/20'
+            }`}
+            id="btn-timer-status-clear"
+          >
+            Show Clock
+          </button>
         </div>
       </div>
 

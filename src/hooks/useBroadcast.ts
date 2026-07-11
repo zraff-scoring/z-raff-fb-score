@@ -54,6 +54,8 @@ export const DEFAULT_STATE: BroadcastState = {
   settings: {
     homeTeam: 'London Red',
     awayTeam: 'London Blue',
+    homeTeamShort: 'LDR',
+    awayTeamShort: 'LDB',
     homeLogo: '',
     awayLogo: '',
     leagueName: 'Z-raff Premier Trophy',
@@ -62,6 +64,8 @@ export const DEFAULT_STATE: BroadcastState = {
     kickoffTime: '20:00 BST',
     competitionLogo: '',
     season: '2026/27',
+    homeColor: '#EF4444',
+    awayColor: '#3B82F6',
   },
   scoreboard: {
     homeScore: 0,
@@ -72,6 +76,7 @@ export const DEFAULT_STATE: BroadcastState = {
     isRunning: false,
     period: '1ST',
     injuryTimeMinutes: 0,
+    customStatus: null,
   },
   lineups: {
     homeCoach: 'Mikel Arteta',
@@ -124,6 +129,8 @@ export const DEFAULT_STATE: BroadcastState = {
   activeReplay: false,
   hideAllGraphics: false,
   hideScoreboard: false,
+  hideClassicScoreboard: false,
+  hideWorldcupScoreboard: false,
   hideTimer: false,
   scoreboardStyle: 'classic',
   activeWinnerAnnounce: null,
@@ -178,6 +185,12 @@ export function useBroadcast() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object' && parsed.settings) {
+          if (!parsed.settings.homeTeamShort) {
+            parsed.settings.homeTeamShort = (parsed.settings.homeTeam || 'HOME').substring(0, 3).toUpperCase();
+          }
+          if (!parsed.settings.awayTeamShort) {
+            parsed.settings.awayTeamShort = (parsed.settings.awayTeam || 'AWAY').substring(0, 3).toUpperCase();
+          }
           return parsed;
         }
       }
@@ -369,6 +382,15 @@ export function useBroadcast() {
           if (parsed && typeof parsed === 'object') {
             // Compare updatedAt to avoid cycles where the controller updates itself with older data
             if (parsed.updatedAt && (!stateRef.current.updatedAt || parsed.updatedAt > stateRef.current.updatedAt)) {
+              if (parsed.settings) {
+                if (!parsed.settings.homeTeamShort) {
+                  parsed.settings.homeTeamShort = (parsed.settings.homeTeam || 'HOME').substring(0, 3).toUpperCase();
+                }
+                if (!parsed.settings.awayTeamShort) {
+                  parsed.settings.awayTeamShort = (parsed.settings.awayTeam || 'AWAY').substring(0, 3).toUpperCase();
+                }
+              }
+
               // Trigger replay event locally if replay trigger timestamp changed
               if (parsed.replayTriggeredAt && parsed.replayTriggeredAt !== stateRef.current.replayTriggeredAt) {
                 const replayEvent = new CustomEvent('broadcast-replay');
@@ -465,6 +487,8 @@ export function useBroadcast() {
       activeSocial: null,
       activeReplay: false,
       hideScoreboard: false,
+      hideClassicScoreboard: false,
+      hideWorldcupScoreboard: false,
       hideTimer: false,
       stats: {
         ...prev.stats,

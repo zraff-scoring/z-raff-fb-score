@@ -13,6 +13,8 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
   // Local form states
   const [homeTeam, setHomeTeam] = useState('');
   const [awayTeam, setAwayTeam] = useState('');
+  const [homeTeamShort, setHomeTeamShort] = useState('');
+  const [awayTeamShort, setAwayTeamShort] = useState('');
   const [homeLogo, setHomeLogo] = useState('');
   const [awayLogo, setAwayLogo] = useState('');
   const [leagueName, setLeagueName] = useState('');
@@ -21,6 +23,8 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
   const [kickoffTime, setKickoffTime] = useState('');
   const [competitionLogo, setCompetitionLogo] = useState('');
   const [season, setSeason] = useState('');
+  const [homeColor, setHomeColor] = useState('#EF4444');
+  const [awayColor, setAwayColor] = useState('#3B82F6');
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
 
   // Sync state to form
@@ -28,6 +32,8 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
     if (state) {
       setHomeTeam(state.settings.homeTeam);
       setAwayTeam(state.settings.awayTeam);
+      setHomeTeamShort(state.settings.homeTeamShort || '');
+      setAwayTeamShort(state.settings.awayTeamShort || '');
       setHomeLogo(state.settings.homeLogo);
       setAwayLogo(state.settings.awayLogo);
       setLeagueName(state.settings.leagueName);
@@ -36,6 +42,8 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
       setKickoffTime(state.settings.kickoffTime);
       setCompetitionLogo(state.settings.competitionLogo);
       setSeason(state.settings.season);
+      setHomeColor(state.settings.homeColor || '#EF4444');
+      setAwayColor(state.settings.awayColor || '#3B82F6');
     }
   }, [state]);
 
@@ -45,6 +53,8 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
       settings: {
         homeTeam,
         awayTeam,
+        homeTeamShort: homeTeamShort.toUpperCase().trim(),
+        awayTeamShort: awayTeamShort.toUpperCase().trim(),
         homeLogo,
         awayLogo,
         leagueName,
@@ -53,6 +63,8 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
         kickoffTime,
         competitionLogo,
         season,
+        homeColor,
+        awayColor,
       }
     }));
   };
@@ -75,28 +87,68 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex flex-col">
-            <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Home Team Name</label>
-            <input 
-              type="text" 
-              value={homeTeam}
-              onChange={(e) => setHomeTeam(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 font-medium"
-              placeholder="e.g. Arsenal"
-              id="match-input-homeTeam"
-            />
+          <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 grid grid-cols-3 gap-3">
+            <div className="flex flex-col col-span-2">
+              <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Home Team (Long Form)</label>
+              <input 
+                type="text" 
+                value={homeTeam}
+                onChange={(e) => {
+                  setHomeTeam(e.target.value);
+                  // Auto fill first 3 letters if empty or short
+                  if (!homeTeamShort || homeTeamShort === homeTeam.substring(0, 3).toUpperCase()) {
+                    setHomeTeamShort(e.target.value.substring(0, 3).toUpperCase());
+                  }
+                }}
+                className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-bold"
+                placeholder="e.g. Arsenal"
+                id="match-input-homeTeam"
+              />
+            </div>
+            <div className="flex flex-col col-span-1">
+              <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Short (3 Chars)</label>
+              <input 
+                type="text" 
+                value={homeTeamShort}
+                maxLength={3}
+                onChange={(e) => setHomeTeamShort(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
+                className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-center text-blue-400 font-mono font-black focus:outline-none focus:border-blue-500"
+                placeholder="ARS"
+                id="match-input-homeTeamShort"
+              />
+            </div>
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Away Team Name</label>
-            <input 
-              type="text" 
-              value={awayTeam}
-              onChange={(e) => setAwayTeam(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 font-medium"
-              placeholder="e.g. Chelsea"
-              id="match-input-awayTeam"
-            />
+          <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 grid grid-cols-3 gap-3">
+            <div className="flex flex-col col-span-2">
+              <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Away Team (Long Form)</label>
+              <input 
+                type="text" 
+                value={awayTeam}
+                onChange={(e) => {
+                  setAwayTeam(e.target.value);
+                  // Auto fill first 3 letters if empty or short
+                  if (!awayTeamShort || awayTeamShort === awayTeam.substring(0, 3).toUpperCase()) {
+                    setAwayTeamShort(e.target.value.substring(0, 3).toUpperCase());
+                  }
+                }}
+                className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-bold"
+                placeholder="e.g. Chelsea"
+                id="match-input-awayTeam"
+              />
+            </div>
+            <div className="flex flex-col col-span-1">
+              <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Short (3 Chars)</label>
+              <input 
+                type="text" 
+                value={awayTeamShort}
+                maxLength={3}
+                onChange={(e) => setAwayTeamShort(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
+                className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-center text-blue-400 font-mono font-black focus:outline-none focus:border-blue-500"
+                placeholder="CHE"
+                id="match-input-awayTeamShort"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col">
@@ -199,6 +251,50 @@ export default function MatchCategory({ state, updateState, clearOverlays, handl
               placeholder="e.g. 2025/2026"
               id="match-input-season"
             />
+          </div>
+
+          <div className="flex flex-col col-span-1 md:col-span-2 bg-slate-950/30 p-4 rounded-xl border border-slate-800/85 gap-3 mt-2">
+            <span className="text-[10px] font-mono tracking-wider text-slate-300 uppercase font-bold">Team Jersey Colors</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label className="text-[9px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Home Team Color</label>
+                <div className="flex gap-2 items-center">
+                  <input 
+                    type="color" 
+                    value={homeColor}
+                    onChange={(e) => setHomeColor(e.target.value)}
+                    className="w-10 h-10 border border-slate-800 rounded bg-transparent p-0 cursor-pointer overflow-hidden shrink-0"
+                    id="match-input-homeColorPicker"
+                  />
+                  <input 
+                    type="text" 
+                    value={homeColor}
+                    onChange={(e) => setHomeColor(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs text-white font-mono"
+                    id="match-input-homeColorText"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[9px] font-mono tracking-wider text-slate-400 uppercase mb-1 font-bold">Away Team Color</label>
+                <div className="flex gap-2 items-center">
+                  <input 
+                    type="color" 
+                    value={awayColor}
+                    onChange={(e) => setAwayColor(e.target.value)}
+                    className="w-10 h-10 border border-slate-800 rounded bg-transparent p-0 cursor-pointer overflow-hidden shrink-0"
+                    id="match-input-awayColorPicker"
+                  />
+                  <input 
+                    type="text" 
+                    value={awayColor}
+                    onChange={(e) => setAwayColor(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs text-white font-mono"
+                    id="match-input-awayColorText"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

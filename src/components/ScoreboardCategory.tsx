@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, Activity, Star, Circle, CheckCircle2, XCircle, RotateCcw, RefreshCw, EyeOff } from 'lucide-react';
+import { Trophy, Activity, Star, Circle, CheckCircle2, XCircle, RotateCcw, RefreshCw, EyeOff, LayoutGrid, Globe } from 'lucide-react';
 import { BroadcastState, Player } from '../types.js';
 
 interface ScoreboardCategoryProps {
@@ -67,7 +67,7 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
         scoreboard: updatedScoreboard,
         activeGoal: {
           team: goalTeam,
-          scorer: finalScorer || 'Unidentified Scorer',
+          scorer: finalScorer || '',
           assist: finalAssist || '',
           minute: calculatedMinute,
           goalNumber,
@@ -245,48 +245,71 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
           </button>
         </div>
 
-        {/* SCOREBOARD STYLE SELECTOR */}
+        {/* SCOREBOARD THEMES & LAYOUTS */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
           <div className="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3">
             <Trophy className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-black text-white">Scoreboard Theme & Layout</h2>
+            <h2 className="text-lg font-black text-white">Scoreboard Themes & Layouts</h2>
           </div>
           
           <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-            Choose between the classic top-left overlay or the professional bottom-center FIFA World Cup style broadcast scoreboard.
+            Control and display individual broadcast overlays independently. You can activate both simultaneously or hide them separately.
           </p>
 
-          <div className="grid grid-cols-2 gap-3 bg-slate-950 p-1.5 rounded-xl border border-slate-850 mb-4">
-            <button
-              onClick={() => updateState(prev => ({ ...prev, scoreboardStyle: 'classic' }))}
-              className={`py-3 rounded-lg text-xs font-black transition-all uppercase flex flex-col items-center gap-1 cursor-pointer ${
-                (state.scoreboardStyle || 'classic') === 'classic'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              id="btn-style-classic"
-            >
-              <span>Classic Theme</span>
-              <span className="text-[9px] opacity-70 font-normal font-mono">Top-Left HUD</span>
-            </button>
-            <button
-              onClick={() => updateState(prev => ({ ...prev, scoreboardStyle: 'worldcup' }))}
-              className={`py-3 rounded-lg text-xs font-black transition-all uppercase flex flex-col items-center gap-1 cursor-pointer ${
-                state.scoreboardStyle === 'worldcup'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              id="btn-style-worldcup"
-            >
-              <span>World Cup Theme</span>
-              <span className="text-[9px] opacity-70 font-normal font-mono">Bottom-Center HUD</span>
-            </button>
+          <div className="space-y-3 mb-5">
+            {/* Classic Theme Toggle */}
+            <div className="flex items-center justify-between bg-slate-950 p-4 rounded-xl border border-slate-850">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                  <LayoutGrid className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <span className="text-sm font-black text-white block">Classic Theme (Top-Left)</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Traditional top-left broadcast HUD</span>
+                </div>
+              </div>
+              <button
+                onClick={() => updateState(prev => ({ ...prev, hideClassicScoreboard: !prev.hideClassicScoreboard }))}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer min-w-[120px] ${
+                  state.hideClassicScoreboard 
+                    ? 'bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 shadow-inner' 
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/10'
+                }`}
+                id="btn-toggle-classic-visibility"
+              >
+                {state.hideClassicScoreboard ? 'HIDDEN' : 'VISIBLE'}
+              </button>
+            </div>
+
+            {/* World Cup Theme Toggle */}
+            <div className="flex items-center justify-between bg-slate-950 p-4 rounded-xl border border-slate-850">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <Globe className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <span className="text-sm font-black text-white block">World Cup Theme (Bottom-Center)</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Professional bottom-centered broadcast HUD</span>
+                </div>
+              </div>
+              <button
+                onClick={() => updateState(prev => ({ ...prev, hideWorldcupScoreboard: !prev.hideWorldcupScoreboard }))}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer min-w-[120px] ${
+                  state.hideWorldcupScoreboard 
+                    ? 'bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 shadow-inner' 
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/10'
+                }`}
+                id="btn-toggle-worldcup-visibility"
+              >
+                {state.hideWorldcupScoreboard ? 'HIDDEN' : 'VISIBLE'}
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-850">
             <div>
-              <span className="text-xs font-bold text-white block">Visibility Toggle</span>
-              <span className="text-[10px] text-slate-400">Temporarily show or hide the scoreboard on stream</span>
+              <span className="text-xs font-bold text-white block">Master Stream Overlay Toggle</span>
+              <span className="text-[10px] text-slate-400">Quickly show/hide all scoreboards and timers</span>
             </div>
             <button
               onClick={() => updateState(prev => ({ ...prev, hideScoreboard: !prev.hideScoreboard }))}
@@ -297,7 +320,7 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
               }`}
               id="btn-toggle-scoreboard-visibility"
             >
-              {state.hideScoreboard ? 'SCOREBOARD HIDDEN' : 'SCOREBOARD VISIBLE'}
+              {state.hideScoreboard ? 'ALL HIDDEN' : 'ALL ACTIVE'}
             </button>
           </div>
         </div>
@@ -424,9 +447,61 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
                 </div>
               </div>
 
+              {/* Manual Shootout Winner Override */}
+              <div className="flex flex-col gap-1.5 mt-1 border-t border-slate-800/60 pt-3">
+                <span className="text-[10px] font-mono text-slate-400 uppercase font-bold">Shootout Winner Override</span>
+                <div className="grid grid-cols-3 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-850">
+                  <button
+                    type="button"
+                    onClick={() => updateState(prev => ({
+                      ...prev,
+                      penaltyShootout: { ...prev.penaltyShootout, winner: null }
+                    }))}
+                    className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer ${
+                      state.penaltyShootout.winner === null
+                        ? 'bg-slate-800 text-white'
+                        : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                    id="btn-shootout-win-none"
+                  >
+                    Auto/None
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateState(prev => ({
+                      ...prev,
+                      penaltyShootout: { ...prev.penaltyShootout, winner: 'home' }
+                    }))}
+                    className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer ${
+                      state.penaltyShootout.winner === 'home'
+                        ? 'bg-emerald-600 text-white font-black'
+                        : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                    id="btn-shootout-win-home"
+                  >
+                    {state.settings.homeTeamShort || 'Home'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateState(prev => ({
+                      ...prev,
+                      penaltyShootout: { ...prev.penaltyShootout, winner: 'away' }
+                    }))}
+                    className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer ${
+                      state.penaltyShootout.winner === 'away'
+                        ? 'bg-emerald-600 text-white font-black'
+                        : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                    id="btn-shootout-win-away"
+                  >
+                    {state.settings.awayTeamShort || 'Away'}
+                  </button>
+                </div>
+              </div>
+
               <button 
                 onClick={handleClearPenalties}
-                className="w-full mt-1 py-1.5 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-slate-400 hover:text-slate-300 rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                className="w-full mt-2 py-1.5 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-slate-400 hover:text-slate-300 rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 id="btn-penalty-clear"
               >
                 <RotateCcw className="w-3 h-3" /> Clear Shootout Data
@@ -612,7 +687,7 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl mt-6">
           <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-amber-400 animate-bounce" />
+              <Trophy className="w-5 h-5 text-amber-400" />
               <h2 className="text-lg font-black text-white">Winner Announcement Board</h2>
             </div>
             {state.activeWinnerAnnounce && (
@@ -632,111 +707,149 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
           </p>
 
           <div className="flex flex-col gap-3.5">
-            <div className="flex flex-col">
-              <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Select Winner Result</label>
-              <div className="grid grid-cols-3 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-850">
-                <button
-                  onClick={() => updateState(prev => ({
-                    ...prev,
-                    activeWinnerAnnounce: {
-                      winner: 'home',
-                      customTitle: prev.activeWinnerAnnounce?.customTitle || 'MATCH CHAMPIONS'
-                    }
-                  }))}
-                  className={`py-2 rounded-lg text-[10px] font-black transition-all uppercase cursor-pointer truncate ${
-                    state.activeWinnerAnnounce?.winner === 'home'
-                      ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  id="btn-winner-select-home"
-                >
-                  {state.settings.homeTeam || 'Home Winner'}
-                </button>
-                <button
-                  onClick={() => updateState(prev => ({
-                    ...prev,
-                    activeWinnerAnnounce: {
-                      winner: 'away',
-                      customTitle: prev.activeWinnerAnnounce?.customTitle || 'MATCH CHAMPIONS'
-                    }
-                  }))}
-                  className={`py-2 rounded-lg text-[10px] font-black transition-all uppercase cursor-pointer truncate ${
-                    state.activeWinnerAnnounce?.winner === 'away'
-                      ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  id="btn-winner-select-away"
-                >
-                  {state.settings.awayTeam || 'Away Winner'}
-                </button>
-                <button
-                  onClick={() => updateState(prev => ({
-                    ...prev,
-                    activeWinnerAnnounce: {
-                      winner: 'draw',
-                      customTitle: prev.activeWinnerAnnounce?.customTitle || 'MATCH COMPLETED'
-                    }
-                  }))}
-                  className={`py-2 rounded-lg text-[10px] font-black transition-all uppercase cursor-pointer truncate ${
-                    state.activeWinnerAnnounce?.winner === 'draw'
-                      ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  id="btn-winner-select-draw"
-                >
-                  Draw / Tie
-                </button>
-              </div>
-            </div>
+            {/* Auto Calculated Result Status Block */}
+            {(() => {
+              const h = state.scoreboard.homeScore;
+              const a = state.scoreboard.awayScore;
+              let computedWinner: 'home' | 'away' | 'draw' = 'draw';
+              let suffix = '';
+              
+              if (h > a) {
+                computedWinner = 'home';
+              } else if (a > h) {
+                computedWinner = 'away';
+              } else {
+                const hPens = state.penaltyShootout?.homeAttempts.filter(x => x === 'goal').length || 0;
+                const aPens = state.penaltyShootout?.awayAttempts.filter(x => x === 'goal').length || 0;
+                const explicitWinner = state.penaltyShootout?.winner;
+                
+                if (explicitWinner === 'home' || (explicitWinner === null && hPens > aPens)) {
+                  computedWinner = 'home';
+                  suffix = ` (via Penalties: ${hPens}-${aPens})`;
+                } else if (explicitWinner === 'away' || (explicitWinner === null && aPens > hPens)) {
+                  computedWinner = 'away';
+                  suffix = ` (via Penalties: ${hPens}-${aPens})`;
+                } else if (hPens > 0 || aPens > 0) {
+                  suffix = ` (Penalties tied: ${hPens}-${aPens})`;
+                }
+              }
+              
+              const winnerName = computedWinner === 'home' 
+                ? state.settings.homeTeam 
+                : (computedWinner === 'away' ? state.settings.awayTeam : 'Draw / Tie');
+                
+              return (
+                <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-mono tracking-wider text-slate-500 uppercase font-black">Calculated Match Result</span>
+                    <span className="text-white font-extrabold text-sm mt-0.5 uppercase tracking-wide">
+                      {computedWinner === 'draw' ? 'No Winner (Tied Match)' : `${winnerName}${suffix}`}
+                    </span>
+                  </div>
+                  <div className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[10px] font-bold rounded-lg uppercase tracking-wider shrink-0">
+                    {computedWinner === 'draw' ? 'TIE' : 'WINNER'}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="flex flex-col">
-              <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Celebration Title</label>
-              <input
-                type="text"
-                placeholder="e.g. CHAMPIONS, WINNER, FULL TIME"
-                value={state.activeWinnerAnnounce?.customTitle || 'MATCH CHAMPIONS'}
-                onChange={(e) => {
-                  const title = e.target.value;
-                  updateState(prev => {
-                    if (!prev.activeWinnerAnnounce) {
-                      const autoWinner = prev.scoreboard.homeScore > prev.scoreboard.awayScore 
-                        ? 'home' 
-                        : (prev.scoreboard.awayScore > prev.scoreboard.homeScore ? 'away' : 'draw');
-                      return {
-                        ...prev,
-                        activeWinnerAnnounce: {
-                          winner: autoWinner,
-                          customTitle: title
-                        }
-                      };
+              <label className="text-[10px] font-mono tracking-wider text-slate-400 uppercase mb-1.5 font-bold">Banner Text Option</label>
+              <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-850">
+                <button
+                  type="button"
+                  onClick={() => updateState(prev => {
+                    const h = prev.scoreboard.homeScore;
+                    const a = prev.scoreboard.awayScore;
+                    let winner: 'home' | 'away' | 'draw' = 'draw';
+                    if (h > a) winner = 'home';
+                    else if (a > h) winner = 'away';
+                    else if (prev.penaltyShootout?.winner === 'home') winner = 'home';
+                    else if (prev.penaltyShootout?.winner === 'away') winner = 'away';
+                    else {
+                      const hPens = prev.penaltyShootout?.homeAttempts.filter(x => x === 'goal').length || 0;
+                      const aPens = prev.penaltyShootout?.awayAttempts.filter(x => x === 'goal').length || 0;
+                      if (hPens > aPens) winner = 'home';
+                      else if (aPens > hPens) winner = 'away';
                     }
+                    
                     return {
                       ...prev,
                       activeWinnerAnnounce: {
-                        ...prev.activeWinnerAnnounce,
-                        customTitle: title
+                        winner,
+                        customTitle: 'WINNER IS'
                       }
                     };
-                  });
-                }}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 w-full text-white"
-                id="winner-custom-title"
-              />
+                  })}
+                  className={`py-2 rounded-lg text-[10px] font-black transition-all uppercase cursor-pointer ${
+                    (state.activeWinnerAnnounce?.customTitle || 'WINNER IS') === 'WINNER IS'
+                      ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  id="btn-winner-title-winner"
+                >
+                  Winner Is
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateState(prev => {
+                    const h = prev.scoreboard.homeScore;
+                    const a = prev.scoreboard.awayScore;
+                    let winner: 'home' | 'away' | 'draw' = 'draw';
+                    if (h > a) winner = 'home';
+                    else if (a > h) winner = 'away';
+                    else if (prev.penaltyShootout?.winner === 'home') winner = 'home';
+                    else if (prev.penaltyShootout?.winner === 'away') winner = 'away';
+                    else {
+                      const hPens = prev.penaltyShootout?.homeAttempts.filter(x => x === 'goal').length || 0;
+                      const aPens = prev.penaltyShootout?.awayAttempts.filter(x => x === 'goal').length || 0;
+                      if (hPens > aPens) winner = 'home';
+                      else if (aPens > hPens) winner = 'away';
+                    }
+                    
+                    return {
+                      ...prev,
+                      activeWinnerAnnounce: {
+                        winner,
+                        customTitle: 'CHAMPION IS'
+                      }
+                    };
+                  })}
+                  className={`py-2 rounded-lg text-[10px] font-black transition-all uppercase cursor-pointer ${
+                    state.activeWinnerAnnounce?.customTitle === 'CHAMPION IS'
+                      ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  id="btn-winner-title-champion"
+                >
+                  Champion Is
+                </button>
+              </div>
             </div>
             
             <div className="flex gap-2.5 mt-2">
               <button
                 onClick={() => {
                   updateState(prev => {
-                    const winner = prev.scoreboard.homeScore > prev.scoreboard.awayScore 
-                      ? 'home' 
-                      : (prev.scoreboard.awayScore > prev.scoreboard.homeScore ? 'away' : 'draw');
+                    const h = prev.scoreboard.homeScore;
+                    const a = prev.scoreboard.awayScore;
+                    let winner: 'home' | 'away' | 'draw' = 'draw';
+                    if (h > a) winner = 'home';
+                    else if (a > h) winner = 'away';
+                    else if (prev.penaltyShootout?.winner === 'home') winner = 'home';
+                    else if (prev.penaltyShootout?.winner === 'away') winner = 'away';
+                    else {
+                      const hPens = prev.penaltyShootout?.homeAttempts.filter(x => x === 'goal').length || 0;
+                      const aPens = prev.penaltyShootout?.awayAttempts.filter(x => x === 'goal').length || 0;
+                      if (hPens > aPens) winner = 'home';
+                      else if (aPens > hPens) winner = 'away';
+                    }
                     
                     return {
                       ...prev,
                       activeWinnerAnnounce: {
                         winner,
-                        customTitle: prev.activeWinnerAnnounce?.customTitle || (winner === 'draw' ? 'MATCH COMPLETED' : 'MATCH CHAMPIONS')
+                        customTitle: prev.activeWinnerAnnounce?.customTitle || 'WINNER IS'
                       }
                     };
                   });

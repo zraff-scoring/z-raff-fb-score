@@ -78,13 +78,13 @@ export default function GraphicsOutput() {
       {/* 1. TOP SCOREBOARD & TIMER */}
       {/* ---------------------------------------------------- */}
       <AnimatePresence>
-        {!state.activeReplay && (!state.hideScoreboard || !state.hideTimer) && (
+        {!state.activeReplay && !state.hideClassicScoreboard && (!state.hideScoreboard || !state.hideTimer || state.timer.customStatus) && (
           <motion.div 
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
             transition={{ type: 'spring', damping: 20 }}
-            className="absolute top-6 left-8 flex items-center bg-slate-950/90 backdrop-blur-md rounded-xl border border-slate-800 shadow-2xl shadow-black/80 overflow-hidden"
+            className="absolute top-6 left-8 flex items-center bg-slate-950/90 backdrop-blur-md rounded-xl border border-slate-800 shadow-2xl shadow-black/80 overflow-visible"
             id="obs-scoreboard"
           >
             {/* IN-SCOREBOARD MODERN GOAL FLASH BANNER */}
@@ -94,14 +94,14 @@ export default function GraphicsOutput() {
                   initial={{ width: 0, opacity: 0 }}
                   animate={{ width: '100%', opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
-                  className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 z-50 flex items-center justify-between px-6 overflow-hidden"
+                  className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 z-50 flex items-center justify-between px-6 overflow-hidden rounded-xl"
                 >
                   <div className="flex items-center gap-3 whitespace-nowrap">
                     <span className="bg-slate-950 text-yellow-400 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider animate-bounce">
                       GOAL!
                     </span>
                     <span className="text-slate-950 font-black text-sm uppercase tracking-wide font-sans">
-                      {state.activeGoal.scorer.toUpperCase()}
+                      {state.activeGoal.scorer ? state.activeGoal.scorer.toUpperCase() : ((state.activeGoal.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam) || 'GOAL SCORED!').toUpperCase()}
                     </span>
                     <span className="text-slate-950/60 font-mono text-xs font-bold">
                       ({state.activeGoal.minute}')
@@ -109,8 +109,8 @@ export default function GraphicsOutput() {
                   </div>
                   
                   <div className="flex items-center gap-2 whitespace-nowrap bg-slate-950/10 px-3 py-1 rounded-lg border border-slate-950/10">
-                    <span className="text-slate-950 font-black text-xs font-mono">
-                      {state.settings.homeTeam.substring(0, 3).toUpperCase()} {state.scoreboard.homeScore} - {state.scoreboard.awayScore} {state.settings.awayTeam.substring(0, 3).toUpperCase()}
+                    <span className="text-slate-950 font-black text-sm font-mono">
+                      {state.settings.homeTeamShort} {state.scoreboard.homeScore} - {state.scoreboard.awayScore} {state.settings.awayTeamShort}
                     </span>
                   </div>
                 </motion.div>
@@ -119,26 +119,45 @@ export default function GraphicsOutput() {
 
             {/* League Tag */}
             {!state.hideScoreboard && (
-              <div className="px-3.5 bg-blue-600 flex flex-col items-center justify-center gap-1 h-16 border-r border-slate-800">
+              <div className="px-4 bg-blue-600 flex items-center justify-center h-16 border-r border-slate-800 rounded-l-xl">
                 {isImageUrl(state.settings.competitionLogo) ? (
                   <img 
                     src={state.settings.competitionLogo} 
                     alt="" 
-                    className="w-8 h-8 object-contain" 
+                    className="w-13 h-13 object-contain" 
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <span className="text-lg leading-none">{state.settings.competitionLogo}</span>
+                  <span className="text-3xl leading-none">{state.settings.competitionLogo}</span>
                 )}
-                <span className="text-[10px] uppercase font-mono tracking-widest text-white font-black" style={{ writingMode: 'vertical-lr' }}>
-                  {state.settings.leagueName.substring(0, 3)}
-                </span>
               </div>
             )}
 
             {/* Home Team */}
             {!state.hideScoreboard && (
-              <div className="flex items-center gap-3 px-5 h-16">
+              <div className="flex items-center gap-3 px-5 h-16 relative overflow-visible">
+                {/* Floating Cards system on top of scoreboard */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 z-50 overflow-visible">
+                  {Array.from({ length: state.stats.yellowCardsHome }).map((_, i) => (
+                    <motion.div 
+                      key={`y-home-classic-${i}`}
+                      initial={{ scale: 0, y: 10 }}
+                      animate={{ scale: 1, y: 0 }}
+                      className="w-3 bg-yellow-400 h-4.5 rounded-[2px] shadow-lg shadow-black/80 border border-yellow-300"
+                      title="Yellow Card"
+                    />
+                  ))}
+                  {Array.from({ length: state.stats.redCardsHome }).map((_, i) => (
+                    <motion.div 
+                      key={`r-home-classic-${i}`}
+                      initial={{ scale: 0, y: 10 }}
+                      animate={{ scale: 1, y: 0 }}
+                      className="w-3 bg-red-600 h-4.5 rounded-[2px] shadow-lg shadow-black/80 border border-red-500 animate-pulse"
+                      title="Red Card"
+                    />
+                  ))}
+                </div>
+
                 {state.settings.homeLogo && (
                   isImageUrl(state.settings.homeLogo) ? (
                     <img 
@@ -151,23 +170,13 @@ export default function GraphicsOutput() {
                     <span className="text-2xl leading-none flex items-center justify-center w-9 h-9">{state.settings.homeLogo}</span>
                   )
                 )}
-                <span className="font-sans font-black text-base tracking-wide text-white uppercase w-14 text-center">
-                  {state.settings.homeTeam.substring(0, 3).toUpperCase()}
+                <div 
+                  className="w-[18px] h-[18px] rounded-full border-2 border-slate-950 ring-2 ring-white/20 shadow-inner shrink-0 ml-1.5"
+                  style={{ backgroundColor: state.settings.homeColor || '#EF4444' }}
+                />
+                <span className="font-sans font-black text-3xl tracking-wider text-white uppercase w-24 text-center">
+                  {state.settings.homeTeamShort}
                 </span>
-
-                {/* Yellow/Red Cards indicators */}
-                <div className="flex flex-col gap-0.5 justify-center items-center shrink-0">
-                  {state.stats.yellowCardsHome > 0 && (
-                    <div className="flex items-center justify-center bg-yellow-400 text-slate-950 font-mono font-black text-[9px] w-3 h-4 rounded-sm shadow-sm" title={`${state.stats.yellowCardsHome} Yellow Card(s)`}>
-                      {state.stats.yellowCardsHome > 1 ? state.stats.yellowCardsHome : ''}
-                    </div>
-                  )}
-                  {state.stats.redCardsHome > 0 && (
-                    <div className="flex items-center justify-center bg-red-600 text-white font-mono font-black text-[9px] w-3 h-4 rounded-sm shadow-sm animate-pulse" title={`${state.stats.redCardsHome} Red Card(s)`}>
-                      {state.stats.redCardsHome > 1 ? state.stats.redCardsHome : ''}
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 
@@ -179,17 +188,17 @@ export default function GraphicsOutput() {
                   initial={{ scale: 1.5, color: '#3b82f6' }}
                   animate={{ scale: 1, color: '#ffffff' }}
                   style={scoreGlow}
-                  className="text-4xl font-black font-mono tracking-tight"
+                  className="text-5xl font-black font-mono tracking-tighter"
                 >
                   {state.scoreboard.homeScore}
                 </motion.span>
-                <span className="mx-2.5 text-slate-500 font-black text-xl">:</span>
+                <span className="mx-2.5 text-slate-500 font-black text-2xl">:</span>
                 <motion.span 
                   key={state.scoreboard.awayScore}
                   initial={{ scale: 1.5, color: '#3b82f6' }}
                   animate={{ scale: 1, color: '#ffffff' }}
                   style={scoreGlow}
-                  className="text-4xl font-black font-mono tracking-tight"
+                  className="text-5xl font-black font-mono tracking-tighter"
                 >
                   {state.scoreboard.awayScore}
                 </motion.span>
@@ -198,24 +207,36 @@ export default function GraphicsOutput() {
 
             {/* Away Team */}
             {!state.hideScoreboard && (
-              <div className="flex items-center gap-3 px-5 h-16">
-                {/* Yellow/Red Cards indicators */}
-                <div className="flex flex-col gap-0.5 justify-center items-center shrink-0">
-                  {state.stats.yellowCardsAway > 0 && (
-                    <div className="flex items-center justify-center bg-yellow-400 text-slate-950 font-mono font-black text-[9px] w-3 h-4 rounded-sm shadow-sm" title={`${state.stats.yellowCardsAway} Yellow Card(s)`}>
-                      {state.stats.yellowCardsAway > 1 ? state.stats.yellowCardsAway : ''}
-                    </div>
-                  )}
-                  {state.stats.redCardsAway > 0 && (
-                    <div className="flex items-center justify-center bg-red-600 text-white font-mono font-black text-[9px] w-3 h-4 rounded-sm shadow-sm animate-pulse" title={`${state.stats.redCardsAway} Red Card(s)`}>
-                      {state.stats.redCardsAway > 1 ? state.stats.redCardsAway : ''}
-                    </div>
-                  )}
+              <div className="flex items-center gap-3 px-5 h-16 relative overflow-visible">
+                {/* Floating Cards system on top of scoreboard */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 z-50 overflow-visible">
+                  {Array.from({ length: state.stats.yellowCardsAway }).map((_, i) => (
+                    <motion.div 
+                      key={`y-away-classic-${i}`}
+                      initial={{ scale: 0, y: 10 }}
+                      animate={{ scale: 1, y: 0 }}
+                      className="w-3 bg-yellow-400 h-4.5 rounded-[2px] shadow-lg shadow-black/80 border border-yellow-300"
+                      title="Yellow Card"
+                    />
+                  ))}
+                  {Array.from({ length: state.stats.redCardsAway }).map((_, i) => (
+                    <motion.div 
+                      key={`r-away-classic-${i}`}
+                      initial={{ scale: 0, y: 10 }}
+                      animate={{ scale: 1, y: 0 }}
+                      className="w-3 bg-red-600 h-4.5 rounded-[2px] shadow-lg shadow-black/80 border border-red-500 animate-pulse"
+                      title="Red Card"
+                    />
+                  ))}
                 </div>
 
-                <span className="font-sans font-black text-base tracking-wide text-white uppercase w-14 text-center">
-                  {state.settings.awayTeam.substring(0, 3).toUpperCase()}
+                <span className="font-sans font-black text-3xl tracking-wider text-white uppercase w-24 text-center">
+                  {state.settings.awayTeamShort}
                 </span>
+                <div 
+                  className="w-[18px] h-[18px] rounded-full border-2 border-slate-950 ring-2 ring-white/20 shadow-inner shrink-0 mr-1.5"
+                  style={{ backgroundColor: state.settings.awayColor || '#3B82F6' }}
+                />
                 {state.settings.awayLogo && (
                   isImageUrl(state.settings.awayLogo) ? (
                     <img 
@@ -232,25 +253,33 @@ export default function GraphicsOutput() {
             )}
 
             {/* Timer HUD */}
-            {!state.hideTimer && (
-              <div className={`flex flex-col items-center justify-center bg-blue-950/80 px-5 h-16 min-w-[90px] ${!state.hideScoreboard ? 'border-l border-slate-800' : ''}`}>
-                <span className="text-[9px] uppercase font-mono tracking-wider text-blue-400 font-bold">
-                  {activePeriodLabel(state.timer.period)}
-                </span>
-                <div className="flex items-center gap-1">
-                  <span className="text-base font-extrabold font-mono text-white tracking-wider">
-                    {formatTime(state.timer.timeSeconds)}
+            {(!state.hideTimer || state.timer.customStatus) && (
+              <div className={`flex flex-col items-center justify-center bg-blue-950/80 px-6 h-16 ${state.timer.customStatus ? 'min-w-[180px]' : 'min-w-[100px]'} ${!state.hideScoreboard ? 'border-l border-slate-800 rounded-r-xl' : 'rounded-xl'}`}>
+                {state.timer.customStatus ? (
+                  <span className="text-sm sm:text-base font-black font-sans text-yellow-400 uppercase tracking-wider text-center animate-pulse py-1 select-none">
+                    {state.timer.customStatus}
                   </span>
-                  {state.timer.injuryTimeMinutes > 0 && (
-                    <motion.span 
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="bg-orange-500 text-slate-950 text-[10px] font-black px-1 rounded ml-1"
-                    >
-                      +{state.timer.injuryTimeMinutes}
-                    </motion.span>
-                  )}
-                </div>
+                ) : (
+                  <>
+                    <span className="text-[10px] uppercase font-mono tracking-widest text-blue-400 font-black">
+                      {activePeriodLabel(state.timer.period)}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xl font-black font-mono text-white tracking-wider">
+                        {formatTime(state.timer.timeSeconds)}
+                      </span>
+                      {state.timer.injuryTimeMinutes > 0 && (
+                        <motion.span 
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="bg-orange-500 text-slate-950 text-[11px] font-black px-1.5 py-0.5 rounded ml-1"
+                        >
+                          +{state.timer.injuryTimeMinutes}
+                        </motion.span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </motion.div>
@@ -261,15 +290,17 @@ export default function GraphicsOutput() {
       {/* 1.5. WORLD CUP STYLE SCOREBOARD & TIMER */}
       {/* ---------------------------------------------------- */}
       <AnimatePresence>
-        {!state.activeReplay && state.scoreboardStyle === 'worldcup' && (!state.hideScoreboard || !state.hideTimer) && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 50, x: '-50%' }}
-            transition={{ type: 'spring', damping: 20 }}
-            className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center z-40 scale-110 md:scale-125"
-            id="obs-scoreboard-worldcup"
-          >
+        {!state.activeReplay && !state.hideWorldcupScoreboard && (!state.hideScoreboard || !state.hideTimer || state.timer.customStatus) && (
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+            <div className="scale-110 md:scale-125 origin-bottom pointer-events-auto">
+              <motion.div 
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 50 }}
+                transition={{ type: 'spring', damping: 20 }}
+                className="flex flex-col items-center"
+                id="obs-scoreboard-worldcup"
+              >
             {/* IN-SCOREBOARD MODERN GOAL FLASH BANNER FOR WORLDCUP */}
             <AnimatePresence>
               {state.activeGoal && (
@@ -284,43 +315,62 @@ export default function GraphicsOutput() {
                       GOAL!
                     </span>
                     <span className="text-slate-950 font-black text-sm uppercase tracking-wide">
-                      {state.activeGoal.scorer.toUpperCase()}
+                      {state.activeGoal.scorer ? state.activeGoal.scorer.toUpperCase() : ((state.activeGoal.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam) || 'GOAL SCORED!').toUpperCase()}
                     </span>
                     <span className="text-slate-950/60 font-mono text-[11px] font-bold">
                       ({state.activeGoal.minute}')
                     </span>
                   </div>
                   <div className="text-slate-950 font-black text-sm font-mono">
-                    {state.settings.homeTeam.substring(0, 3).toUpperCase()} {state.scoreboard.homeScore} - {state.scoreboard.awayScore} {state.settings.awayTeam.substring(0, 3).toUpperCase()}
+                    {state.settings.homeTeamShort} {state.scoreboard.homeScore} - {state.scoreboard.awayScore} {state.settings.awayTeamShort}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {/* Main World Cup Layout */}
-            <div className="flex items-center bg-slate-950/95 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl shadow-black/95 overflow-hidden h-20">
+            <div className="flex items-center bg-slate-950/95 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl shadow-black/95 overflow-visible h-20">
               {/* Competition Pill */}
               {!state.hideScoreboard && (
-                <div className="px-5 bg-gradient-to-br from-indigo-700 to-blue-900 flex items-center justify-center gap-3 h-full border-r border-slate-800/80">
+                <div className="px-6 bg-gradient-to-br from-indigo-700 to-blue-900 flex items-center justify-center h-full border-r border-slate-800/80 rounded-l-2xl">
                   {isImageUrl(state.settings.competitionLogo) ? (
                     <img 
                       src={state.settings.competitionLogo} 
                       alt="" 
-                      className="w-10 h-10 object-contain" 
+                      className="w-16 h-16 object-contain animate-pulse-subtle" 
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <span className="text-3xl leading-none">{state.settings.competitionLogo}</span>
+                    <span className="text-4xl leading-none">{state.settings.competitionLogo}</span>
                   )}
-                  <span className="text-xs font-black uppercase font-mono tracking-widest text-slate-100">
-                    {state.settings.leagueName.substring(0, 3).toUpperCase()}
-                  </span>
                 </div>
               )}
 
               {/* Home Team Tab */}
               {!state.hideScoreboard && (
-                <div className="flex items-center gap-3.5 px-6 h-full">
+                <div className="flex items-center gap-3.5 px-6 h-full relative overflow-visible">
+                  {/* Floating Cards system on top of scoreboard */}
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-50 overflow-visible">
+                    {Array.from({ length: state.stats.yellowCardsHome }).map((_, i) => (
+                      <motion.div 
+                        key={`y-home-wc-${i}`}
+                        initial={{ scale: 0, y: 10 }}
+                        animate={{ scale: 1, y: 0 }}
+                        className="w-3.5 bg-yellow-400 h-5 rounded-[2px] shadow-lg shadow-black/80 border border-yellow-300"
+                        title="Yellow Card"
+                      />
+                    ))}
+                    {Array.from({ length: state.stats.redCardsHome }).map((_, i) => (
+                      <motion.div 
+                        key={`r-home-wc-${i}`}
+                        initial={{ scale: 0, y: 10 }}
+                        animate={{ scale: 1, y: 0 }}
+                        className="w-3.5 bg-red-600 h-5 rounded-[2px] shadow-lg shadow-black/80 border border-red-500 animate-pulse"
+                        title="Red Card"
+                      />
+                    ))}
+                  </div>
+
                   {state.settings.homeLogo && (
                     isImageUrl(state.settings.homeLogo) ? (
                       <img 
@@ -333,36 +383,24 @@ export default function GraphicsOutput() {
                       <span className="text-3xl leading-none flex items-center justify-center w-10 h-10">{state.settings.homeLogo}</span>
                     )
                   )}
-                  <span className="font-mono font-black text-2xl tracking-widest text-slate-100 uppercase">
-                    {state.settings.homeTeam.substring(0, 3).toUpperCase()}
+                  <div 
+                    className="w-[22px] h-[22px] rounded-full border-2 border-slate-950 ring-2 ring-white/20 shadow-inner shrink-0 ml-1.5"
+                    style={{ backgroundColor: state.settings.homeColor || '#EF4444' }}
+                  />
+                  <span className="font-mono font-black text-5xl tracking-widest text-white uppercase">
+                    {state.settings.homeTeamShort}
                   </span>
-
-                  {/* Yellow/Red Cards indicators */}
-                  {(state.stats.yellowCardsHome > 0 || state.stats.redCardsHome > 0) && (
-                    <div className="flex gap-1 shrink-0 ml-1">
-                      {state.stats.yellowCardsHome > 0 && (
-                        <div className="flex items-center justify-center bg-yellow-400 text-slate-950 font-mono font-black text-[9px] w-3 h-4 rounded-sm shadow-sm">
-                          {state.stats.yellowCardsHome > 1 ? state.stats.yellowCardsHome : ''}
-                        </div>
-                      )}
-                      {state.stats.redCardsHome > 0 && (
-                        <div className="flex items-center justify-center bg-red-600 text-white font-mono font-black text-[9px] w-3 h-4 rounded-sm shadow-sm animate-pulse">
-                          {state.stats.redCardsHome > 1 ? state.stats.redCardsHome : ''}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
 
               {/* Home Score Badge */}
               {!state.hideScoreboard && (
-                <div className="bg-slate-900/90 w-16 h-full flex items-center justify-center border-l border-slate-800/60">
+                <div className="bg-slate-900/90 w-20 h-full flex items-center justify-center border-l border-slate-800/60">
                   <motion.span 
                     key={state.scoreboard.homeScore}
                     initial={{ scale: 1.5, color: '#e2e8f0' }}
                     animate={{ scale: 1, color: '#ffffff' }}
-                    className="text-3xl font-black font-mono text-white"
+                    className="text-4xl font-black font-mono text-white"
                   >
                     {state.scoreboard.homeScore}
                   </motion.span>
@@ -378,12 +416,12 @@ export default function GraphicsOutput() {
 
               {/* Away Score Badge */}
               {!state.hideScoreboard && (
-                <div className="bg-slate-900/90 w-16 h-full flex items-center justify-center border-r border-slate-800/60">
+                <div className="bg-slate-900/90 w-20 h-full flex items-center justify-center border-r border-slate-800/60">
                   <motion.span 
                     key={state.scoreboard.awayScore}
                     initial={{ scale: 1.5, color: '#e2e8f0' }}
                     animate={{ scale: 1, color: '#ffffff' }}
-                    className="text-3xl font-black font-mono text-white"
+                    className="text-4xl font-black font-mono text-white"
                   >
                     {state.scoreboard.awayScore}
                   </motion.span>
@@ -392,26 +430,36 @@ export default function GraphicsOutput() {
 
               {/* Away Team Tab */}
               {!state.hideScoreboard && (
-                <div className="flex items-center gap-3.5 px-6 h-full border-r border-slate-800/80">
-                  {/* Yellow/Red Cards indicators */}
-                  {(state.stats.yellowCardsAway > 0 || state.stats.redCardsAway > 0) && (
-                    <div className="flex gap-1 shrink-0 mr-1">
-                      {state.stats.yellowCardsAway > 0 && (
-                        <div className="flex items-center justify-center bg-yellow-400 text-slate-950 font-mono font-black text-[9px] w-3 h-4 rounded-sm shadow-sm">
-                          {state.stats.yellowCardsAway > 1 ? state.stats.yellowCardsAway : ''}
-                        </div>
-                      )}
-                      {state.stats.redCardsAway > 0 && (
-                        <div className="flex items-center justify-center bg-red-600 text-white font-mono font-black text-[9px] w-3 h-4 rounded-sm shadow-sm animate-pulse">
-                          {state.stats.redCardsAway > 1 ? state.stats.redCardsAway : ''}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <div className="flex items-center gap-3.5 px-6 h-full border-r border-slate-800/80 relative overflow-visible">
+                  {/* Floating Cards system on top of scoreboard */}
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-50 overflow-visible">
+                    {Array.from({ length: state.stats.yellowCardsAway }).map((_, i) => (
+                      <motion.div 
+                        key={`y-away-wc-${i}`}
+                        initial={{ scale: 0, y: 10 }}
+                        animate={{ scale: 1, y: 0 }}
+                        className="w-3.5 bg-yellow-400 h-5 rounded-[2px] shadow-lg shadow-black/80 border border-yellow-300"
+                        title="Yellow Card"
+                      />
+                    ))}
+                    {Array.from({ length: state.stats.redCardsAway }).map((_, i) => (
+                      <motion.div 
+                        key={`r-away-wc-${i}`}
+                        initial={{ scale: 0, y: 10 }}
+                        animate={{ scale: 1, y: 0 }}
+                        className="w-3.5 bg-red-600 h-5 rounded-[2px] shadow-lg shadow-black/80 border border-red-500 animate-pulse"
+                        title="Red Card"
+                      />
+                    ))}
+                  </div>
 
-                  <span className="font-mono font-black text-2xl tracking-widest text-slate-100 uppercase">
-                    {state.settings.awayTeam.substring(0, 3).toUpperCase()}
+                  <span className="font-mono font-black text-5xl tracking-widest text-white uppercase">
+                    {state.settings.awayTeamShort}
                   </span>
+                  <div 
+                    className="w-[22px] h-[22px] rounded-full border-2 border-slate-950 ring-2 ring-white/20 shadow-inner shrink-0 mr-1.5"
+                    style={{ backgroundColor: state.settings.awayColor || '#3B82F6' }}
+                  />
                   {state.settings.awayLogo && (
                     isImageUrl(state.settings.awayLogo) ? (
                       <img 
@@ -428,103 +476,35 @@ export default function GraphicsOutput() {
               )}
 
               {/* Timer & Half HUD */}
-              {!state.hideTimer && (
-                <div className="flex flex-col items-center justify-center bg-amber-500/95 px-6 h-full min-w-[120px]">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-amber-950 font-black">
-                    {activePeriodLabel(state.timer.period)}
-                  </span>
-                  <div className="flex items-center gap-0.5">
-                    <span className="text-xl font-extrabold font-mono text-slate-950 tracking-wider">
-                      {formatTime(state.timer.timeSeconds)}
+              {(!state.hideTimer || state.timer.customStatus) && (
+                <div className={`flex flex-col items-center justify-center bg-amber-500/95 px-6 h-full ${state.timer.customStatus ? 'min-w-[180px]' : 'min-w-[130px]'} ${!state.hideScoreboard ? 'rounded-r-2xl' : 'rounded-2xl'}`}>
+                  {state.timer.customStatus ? (
+                    <span className="text-sm sm:text-base font-black font-sans text-slate-950 uppercase tracking-wider text-center animate-pulse select-none">
+                      {state.timer.customStatus}
                     </span>
-                    {state.timer.injuryTimeMinutes > 0 && (
-                      <span className="bg-slate-950 text-amber-400 text-xs font-black px-1.5 py-0.5 rounded ml-1.5">
-                        +{state.timer.injuryTimeMinutes}
+                  ) : (
+                    <>
+                      <span className="text-[11px] uppercase font-mono tracking-widest text-amber-950 font-black">
+                        {activePeriodLabel(state.timer.period)}
                       </span>
-                    )}
-                  </div>
+                      <div className="flex items-center gap-0.5">
+                        <span className="text-2xl font-black font-mono text-slate-950 tracking-wider">
+                          {formatTime(state.timer.timeSeconds)}
+                        </span>
+                        {state.timer.injuryTimeMinutes > 0 && (
+                          <span className="bg-slate-950 text-amber-400 text-xs font-black px-1.5 py-0.5 rounded ml-1.5">
+                            +{state.timer.injuryTimeMinutes}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ---------------------------------------------------- */}
-      {/* 2. DYNAMIC GOAL POPUP GRAPHIC */}
-      {/* ---------------------------------------------------- */}
-      <AnimatePresence>
-        {state.activeGoal && (
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none z-50"
-            id="obs-goal-popup"
-          >
-            <div className="w-[600px] bg-slate-950/95 border-2 border-yellow-500 rounded-3xl p-1 shadow-2xl shadow-yellow-500/20 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-900 via-slate-950 to-blue-900 rounded-[22px] px-8 py-6 relative overflow-hidden">
-                {/* Visual lines backdrop */}
-                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:16px_16px]" />
-                
-                {/* Goal Header */}
-                <motion.div 
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex flex-col items-center text-center"
-                >
-                  <div className="px-6 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 rounded-full flex items-center gap-2 shadow-lg shadow-yellow-500/30">
-                    <Trophy className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-                    <span className="text-slate-950 text-xs font-black uppercase tracking-widest font-sans">
-                      Goal Scored
-                    </span>
-                  </div>
-                </motion.div>
-
-                {/* Team Logo and Info */}
-                <div className="flex items-center justify-center gap-6 mt-6">
-                  {state.activeGoal.team === 'home' ? (
-                    state.settings.homeLogo && (
-                      isImageUrl(state.settings.homeLogo) ? (
-                        <img src={state.settings.homeLogo} alt="" className="w-16 h-16 rounded-full border-2 border-yellow-500 shadow-lg bg-slate-800" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="text-5xl leading-none flex items-center justify-center w-16 h-16">{state.settings.homeLogo}</span>
-                      )
-                    )
-                  ) : (
-                    state.settings.awayLogo && (
-                      isImageUrl(state.settings.awayLogo) ? (
-                        <img src={state.settings.awayLogo} alt="" className="w-16 h-16 rounded-full border-2 border-yellow-500 shadow-lg bg-slate-800" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="text-5xl leading-none flex items-center justify-center w-16 h-16">{state.settings.awayLogo}</span>
-                      )
-                    )
-                  )}
-
-                  <div className="flex flex-col">
-                    <span className="text-xs uppercase font-mono tracking-widest text-yellow-400 font-bold">
-                      {state.activeGoal.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam}
-                    </span>
-                    <span className="text-3xl font-black tracking-tight text-white mt-1">
-                      {state.activeGoal.scorer}
-                    </span>
-                    {state.activeGoal.assist && (
-                      <span className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                        <Sparkles className="w-3.5 h-3.5 text-yellow-500" /> Assist: {state.activeGoal.assist}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Match Minute */}
-                <div className="mt-6 border-t border-slate-800/80 pt-4 flex justify-between items-center text-slate-400 text-xs font-mono">
-                  <span>Minute: <strong className="text-yellow-400 font-bold">{state.activeGoal.minute}'</strong></span>
-                  <span>Goal #<strong className="text-yellow-400 font-bold">{state.activeGoal.goalNumber}</strong></span>
-                </div>
-              </div>
+              </motion.div>
             </div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -554,13 +534,13 @@ export default function GraphicsOutput() {
               />
 
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-mono tracking-widest text-slate-400 font-bold">
+                <span className="text-xs uppercase font-mono tracking-widest text-slate-400 font-black">
                   {state.activeCard.cardType === 'yellow' ? 'Yellow Card' : 'Red Card'}
                 </span>
-                <span className="text-lg font-black text-white leading-tight mt-1">
+                <span className="text-xl font-black text-white leading-tight mt-1">
                   {state.activeCard.player}
                 </span>
-                <span className="text-xs text-blue-400 font-mono mt-1">
+                <span className="text-sm text-blue-400 font-mono mt-1.5 font-bold">
                   {state.activeCard.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam} • {state.activeCard.minute}'
                 </span>
               </div>
@@ -575,37 +555,37 @@ export default function GraphicsOutput() {
       <AnimatePresence>
         {state.activeVAR && (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            className="absolute bottom-16 left-16 pointer-events-none z-50"
             id="obs-var-popup"
           >
-            <div className="w-[550px] bg-slate-950/95 border-2 border-red-600 rounded-2xl p-1 shadow-[0_0_50px_rgba(220,38,38,0.2)] overflow-hidden">
-              <div className="bg-slate-950 rounded-xl p-6 relative">
+            <div className="w-[320px] bg-slate-950/95 border-2 border-red-600 rounded-xl p-0.5 shadow-[0_0_30px_rgba(220,38,38,0.3)] overflow-hidden">
+              <div className="bg-slate-950 rounded-lg p-3.5 relative">
                 {/* Scanline effect */}
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-red-950/10 to-transparent animate-pulse pointer-events-none" />
                 
                 {/* Header */}
-                <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-                  <div className="p-2 bg-red-600 text-white rounded-lg animate-pulse">
-                    <Tv2 className="w-5 h-5 stroke-[2.5]" />
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                  <div className="p-1.5 bg-red-600 text-white rounded animate-pulse">
+                    <Tv2 className="w-4 h-4 stroke-[2.5]" />
                   </div>
                   <div>
-                    <span className="text-xs font-black uppercase font-mono tracking-widest text-red-500">Video Assistant Referee</span>
-                    <h2 className="text-2xl font-black text-white tracking-tight">{state.activeVAR.type.replace('_', ' ')}</h2>
+                    <span className="text-[9px] font-black uppercase font-mono tracking-wider text-red-500 block">Video Assistant Referee</span>
+                    <h2 className="text-sm font-black text-white tracking-tight uppercase">{state.activeVAR.type.replace('_', ' ')}</h2>
                   </div>
                 </div>
 
                 {/* Sub message */}
-                <p className="mt-4 text-slate-300 font-semibold text-center border border-slate-800/80 bg-slate-900/40 py-3 px-4 rounded-lg">
-                  {state.activeVAR.customMessage || "Decision Pending - Checking System Logs"}
+                <p className="mt-2.5 text-slate-200 font-bold text-xs text-center border border-slate-800/80 bg-slate-900/40 py-2 px-3 rounded">
+                  {state.activeVAR.customMessage || "Decision Pending - Checking Logs"}
                 </p>
 
                 {/* Pulsing Alert Light */}
-                <div className="flex justify-center items-center gap-2 mt-4 text-[10px] font-mono uppercase tracking-widest text-red-400">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping inline-block" />
-                  <span>Reviewing Broadcast Replay</span>
+                <div className="flex justify-center items-center gap-1.5 mt-2.5 text-[9px] font-mono uppercase tracking-wider text-red-400">
+                  <span className="w-2 h-2 rounded-full bg-red-600 animate-ping inline-block" />
+                  <span>Reviewing Replay</span>
                 </div>
               </div>
             </div>
@@ -629,10 +609,10 @@ export default function GraphicsOutput() {
               {/* Title Header */}
               <div className="flex justify-between items-center border-b border-slate-800 pb-6">
                 <div>
-                  <span className="text-xs font-black uppercase font-mono text-blue-500 tracking-wider">
+                  <span className="text-sm font-black uppercase font-mono text-blue-500 tracking-wider">
                     {state.lineups.activeLineupView === 'vs' ? 'Tactical Clash' : 'Starting Lineup'}
                   </span>
-                  <h1 className="text-4xl font-black text-white mt-1">
+                  <h1 className="text-5xl font-black text-white mt-1.5">
                     {state.lineups.activeLineupView === 'vs' 
                       ? `${state.settings.homeTeam} VS ${state.settings.awayTeam}` 
                       : state.lineups.activeLineupView === 'home' ? state.settings.homeTeam : state.settings.awayTeam
@@ -642,8 +622,8 @@ export default function GraphicsOutput() {
 
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <span className="text-xs font-mono text-slate-400 block">FORMATION</span>
-                    <span className="text-lg font-black text-white font-mono">
+                    <span className="text-sm font-mono font-bold text-slate-400 block">FORMATION</span>
+                    <span className="text-2xl font-black text-white font-mono">
                       {state.lineups.activeLineupView === 'away' ? state.lineups.awayFormation : state.lineups.homeFormation}
                     </span>
                   </div>
@@ -700,50 +680,42 @@ export default function GraphicsOutput() {
                     {/* Team Matchup and Captains Block */}
                     <div className="grid grid-cols-11 gap-4 items-stretch flex-1 overflow-hidden">
                       {/* Left Side (Col 5): Home Team Panel */}
-                      <div className="col-span-5 bg-gradient-to-b from-blue-950/20 to-slate-900/40 rounded-3xl border border-slate-800/80 p-6 flex flex-col justify-between items-center relative overflow-hidden shadow-xl">
-                        {/* Team Title Card */}
-                        <div className="flex items-center gap-4 w-full border-b border-slate-800 pb-4 mb-4">
-                          {state.settings.homeLogo && (
-                            isImageUrl(state.settings.homeLogo) ? (
-                              <img src={state.settings.homeLogo} alt="" className="w-14 h-14 rounded-full border-2 border-slate-700 bg-slate-950 object-cover shadow-lg" referrerPolicy="no-referrer" />
+                      <div className="col-span-5 bg-gradient-to-b from-blue-950/20 to-slate-900/40 rounded-3xl border border-slate-800/80 p-6 flex flex-col justify-center items-center relative overflow-hidden shadow-xl min-h-[380px]">
+                        {/* Huge Square Team Emblem */}
+                        <div className="w-48 h-48 rounded-2xl p-0.5 bg-gradient-to-tr from-blue-500 to-indigo-500 shadow-2xl shadow-blue-500/10 mb-5">
+                          <div className="w-full h-full rounded-2xl bg-slate-950 overflow-hidden relative border-4 border-slate-950 flex items-center justify-center p-4">
+                            {state.settings.homeLogo ? (
+                              isImageUrl(state.settings.homeLogo) ? (
+                                <img src={state.settings.homeLogo} alt="" className="max-w-full max-h-full object-contain rounded-lg" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span className="text-7xl leading-none">{state.settings.homeLogo}</span>
+                              )
                             ) : (
-                              <span className="text-4xl leading-none flex items-center justify-center w-14 h-14">{state.settings.homeLogo}</span>
-                            )
-                          )}
-                          <div className="text-left w-full truncate">
-                            <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest block leading-none mb-1">HOME CLUB</span>
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-tight truncate">{state.settings.homeTeam}</h2>
-                            <span className="text-xs text-slate-400 font-mono">COACH: {state.lineups.homeCoach}</span>
+                              <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
+                                <span className="text-5xl font-black">{state.settings.homeTeamShort || 'H'}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Captain Pic Highlight */}
-                        <div className="flex flex-col items-center flex-1 justify-center py-2">
-                          <div className="relative mb-3">
-                            <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-amber-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-950 shadow z-10 font-mono">
-                              C
-                            </div>
-                            <div className="w-36 h-36 rounded-full p-0.5 bg-gradient-to-tr from-amber-500 to-yellow-300 shadow-lg shadow-amber-500/10">
-                              <div className="w-full h-full rounded-full bg-slate-950 overflow-hidden relative border-4 border-slate-950">
-                                {homeCaptain?.photoUrl ? (
-                                  <img src={homeCaptain.photoUrl} alt={homeCaptain.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
-                                    <span className="text-3xl font-black">#{homeCaptain?.number}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                        {/* Team Info Details */}
+                        <div className="text-center w-full">
+                          <span className="text-[11px] font-mono text-blue-400 uppercase tracking-widest block leading-none mb-1.5 font-black">HOME CLUB</span>
+                          <h2 className="text-3xl font-black text-white uppercase tracking-tight leading-tight mb-2 truncate px-2">{state.settings.homeTeam}</h2>
                           
-                          <div className="text-center">
-                            <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold bg-amber-950/40 border border-amber-900/30 px-2 py-0.5 rounded">
-                              {homeCaptain?.position} • JERSEY #{homeCaptain?.number}
-                            </span>
-                            <h3 className="text-xl font-black text-white mt-2 tracking-tight uppercase">
-                              {homeCaptain?.name || 'No Captain Marked'}
-                            </h3>
-                            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest block mt-0.5">TEAM CAPTAIN</span>
+                          <div className="flex flex-col items-center justify-center gap-1 font-mono text-xs text-slate-400">
+                            {state.lineups.homeCoach && (
+                              <div className="bg-slate-950/60 border border-slate-800/60 px-3 py-1 rounded-full flex items-center gap-1.5">
+                                <span className="text-slate-500 text-[10px] uppercase font-bold">COACH:</span>
+                                <span className="text-white font-bold">{state.lineups.homeCoach}</span>
+                              </div>
+                            )}
+                            {homeCaptain && (
+                              <div className="bg-slate-950/40 border border-slate-850/60 px-3 py-1 rounded-full flex items-center gap-1.5 mt-1">
+                                <span className="text-amber-400 text-[10px] uppercase font-bold">CAPTAIN:</span>
+                                <span className="text-slate-300 font-bold">{homeCaptain.name} (#{homeCaptain.number})</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -751,201 +723,254 @@ export default function GraphicsOutput() {
                       {/* Middle (Col 1): Big VS Graphic */}
                       <div className="col-span-1 flex flex-col items-center justify-center">
                         <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 border border-blue-500 flex items-center justify-center shadow-xl shadow-blue-500/20 text-center relative animate-pulse">
-                          <span className="font-sans font-black text-white italic text-lg tracking-wider">VS</span>
+                          <span className="font-sans font-black text-white italic text-lg tracking-wider font-bold">VS</span>
                           <div className="absolute -inset-1 rounded-full border border-blue-500/30 pointer-events-none" />
                         </div>
                       </div>
 
                       {/* Right Side (Col 5): Away Team Panel */}
-                      <div className="col-span-5 bg-gradient-to-b from-blue-950/20 to-slate-900/40 rounded-3xl border border-slate-800/80 p-6 flex flex-col justify-between items-center relative overflow-hidden shadow-xl">
-                        {/* Team Title Card */}
-                        <div className="flex items-center gap-4 w-full border-b border-slate-800 pb-4 mb-4">
-                          {state.settings.awayLogo && (
-                            isImageUrl(state.settings.awayLogo) ? (
-                              <img src={state.settings.awayLogo} alt="" className="w-14 h-14 rounded-full border-2 border-slate-700 bg-slate-950 object-cover shadow-lg" referrerPolicy="no-referrer" />
+                      <div className="col-span-5 bg-gradient-to-b from-blue-950/20 to-slate-900/40 rounded-3xl border border-slate-800/80 p-6 flex flex-col justify-center items-center relative overflow-hidden shadow-xl min-h-[380px]">
+                        {/* Huge Square Team Emblem */}
+                        <div className="w-48 h-48 rounded-2xl p-0.5 bg-gradient-to-tr from-blue-500 to-indigo-500 shadow-2xl shadow-blue-500/10 mb-5">
+                          <div className="w-full h-full rounded-2xl bg-slate-950 overflow-hidden relative border-4 border-slate-950 flex items-center justify-center p-4">
+                            {state.settings.awayLogo ? (
+                              isImageUrl(state.settings.awayLogo) ? (
+                                <img src={state.settings.awayLogo} alt="" className="max-w-full max-h-full object-contain rounded-lg" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span className="text-7xl leading-none">{state.settings.awayLogo}</span>
+                              )
                             ) : (
-                              <span className="text-4xl leading-none flex items-center justify-center w-14 h-14">{state.settings.awayLogo}</span>
-                            )
-                          )}
-                          <div className="text-left w-full truncate">
-                            <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest block leading-none mb-1">AWAY CLUB</span>
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-tight truncate">{state.settings.awayTeam}</h2>
-                            <span className="text-xs text-slate-400 font-mono">COACH: {state.lineups.awayCoach}</span>
+                              <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
+                                <span className="text-5xl font-black">{state.settings.awayTeamShort || 'A'}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Captain Pic Highlight */}
-                        <div className="flex flex-col items-center flex-1 justify-center py-2">
-                          <div className="relative mb-3">
-                            <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-amber-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-950 shadow z-10 font-mono">
-                              C
-                            </div>
-                            <div className="w-36 h-36 rounded-full p-0.5 bg-gradient-to-tr from-amber-500 to-yellow-300 shadow-lg shadow-amber-500/10">
-                              <div className="w-full h-full rounded-full bg-slate-950 overflow-hidden relative border-4 border-slate-950">
-                                {awayCaptain?.photoUrl ? (
-                                  <img src={awayCaptain.photoUrl} alt={awayCaptain.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
-                                    <span className="text-3xl font-black">#{awayCaptain?.number}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                        {/* Team Info Details */}
+                        <div className="text-center w-full">
+                          <span className="text-[11px] font-mono text-blue-400 uppercase tracking-widest block leading-none mb-1.5 font-black">AWAY CLUB</span>
+                          <h2 className="text-3xl font-black text-white uppercase tracking-tight leading-tight mb-2 truncate px-2">{state.settings.awayTeam}</h2>
                           
-                          <div className="text-center">
-                            <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold bg-amber-950/40 border border-amber-900/30 px-2 py-0.5 rounded">
-                              {awayCaptain?.position} • JERSEY #{awayCaptain?.number}
-                            </span>
-                            <h3 className="text-xl font-black text-white mt-2 tracking-tight uppercase font-bold">
-                              {awayCaptain?.name || 'No Captain Marked'}
-                            </h3>
-                            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest block mt-0.5">TEAM CAPTAIN</span>
+                          <div className="flex flex-col items-center justify-center gap-1 font-mono text-xs text-slate-400">
+                            {state.lineups.awayCoach && (
+                              <div className="bg-slate-950/60 border border-slate-800/60 px-3 py-1 rounded-full flex items-center gap-1.5">
+                                <span className="text-slate-500 text-[10px] uppercase font-bold">COACH:</span>
+                                <span className="text-white font-bold">{state.lineups.awayCoach}</span>
+                              </div>
+                            )}
+                            {awayCaptain && (
+                              <div className="bg-slate-950/40 border border-slate-850/60 px-3 py-1 rounded-full flex items-center gap-1.5 mt-1">
+                                <span className="text-amber-400 text-[10px] uppercase font-bold">CAPTAIN:</span>
+                                <span className="text-slate-300 font-bold">{awayCaptain.name} (#{awayCaptain.number})</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 );
-                })() : (
-                  <div className="grid grid-cols-12 gap-8 my-8 flex-1 overflow-hidden" id="lineup-team-layout">
-                    {/* Left/Center Side (Col span 8): Starting XI Player List in 2-Column Grid */}
-                    <div className="col-span-8 flex flex-col justify-between bg-slate-900/40 rounded-2xl border border-slate-800/60 p-6">
-                      <div>
-                        <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
-                          <h3 className="text-sm font-black uppercase font-mono text-blue-400 tracking-wider">
-                            STARTING XI ROSTER
-                          </h3>
-                          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-                            <span>COACH:</span>
-                            <span className="text-white font-bold uppercase">
-                              {state.lineups.activeLineupView === 'away' ? state.lineups.awayCoach : state.lineups.homeCoach || 'Unassigned'}
-                            </span>
+              })() : (() => {
+                  const view = state.lineups.activeLineupView; // 'home' or 'away'
+                  const isHome = view === 'home';
+                  const teamName = isHome ? state.settings.homeTeam : state.settings.awayTeam;
+                  const teamLogo = isHome ? state.settings.homeLogo : state.settings.awayLogo;
+                  const teamColor = isHome ? state.settings.homeColor : state.settings.awayColor;
+                  const coach = isHome ? state.lineups.homeCoach : state.lineups.awayCoach;
+                  const formation = isHome ? state.lineups.homeFormation : state.lineups.awayFormation;
+                  const roster = isHome ? state.lineups.homeStartingXI : state.lineups.awayStartingXI;
+                  const subs = (isHome ? state.lineups.homeSubs : state.lineups.awaySubs) || [];
+                  const validSubs = subs.filter(s => s.name && s.name.trim() !== '');
+
+                  return (
+                    <div className="grid grid-cols-12 gap-6 my-2 flex-1 items-stretch overflow-hidden z-10 w-full animate-fade-in" id="lineup-team-layout">
+                      {/* Left Panel: Substitutes List & Coach (Matches Spanish Reference) */}
+                      <div className="col-span-12 lg:col-span-4 flex flex-col bg-slate-950/80 backdrop-blur-md rounded-3xl border border-slate-800/80 p-5 h-full justify-between shadow-2xl relative overflow-hidden">
+                        {/* Left vertical strip indicating team color */}
+                        <div 
+                          className="absolute left-0 inset-y-0 w-2.5 rounded-l-3xl"
+                          style={{ backgroundColor: teamColor || '#EF4444' }}
+                        />
+                        
+                        <div className="flex flex-col flex-1 min-h-0 pl-2">
+                          <div className="flex items-center gap-2 border-b border-slate-800/85 pb-2.5 mb-3">
+                            <div className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+                            <h3 className="text-xs font-black uppercase font-mono text-teal-400 tracking-wider">
+                              SUBSTITUTES
+                            </h3>
+                          </div>
+
+                          {/* Substitutes scrollable content */}
+                          <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 flex-1 min-h-0">
+                            {validSubs.length > 0 ? (
+                              validSubs.map((sub: Player, subIdx: number) => (
+                                <motion.div 
+                                  key={sub.id || subIdx}
+                                  initial={{ opacity: 0, x: -15 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: subIdx * 0.03 }}
+                                  className="flex items-center gap-3 py-1.5 border-b border-slate-900/40 hover:bg-slate-900/30 px-2 rounded-lg transition-all shrink-0"
+                                >
+                                  <span className="text-xs font-mono font-black text-teal-400 w-5 text-right">{sub.number}</span>
+                                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-black bg-slate-900 text-slate-400 text-center w-8 leading-none">
+                                    {sub.position}
+                                  </span>
+                                  <span className="text-xs font-black text-white uppercase truncate flex-1 tracking-wide">
+                                    {sub.name}
+                                  </span>
+                                </motion.div>
+                              ))
+                            ) : (
+                              <div className="flex items-center justify-center py-10 text-slate-500 font-mono text-[11px] italic">
+                                No substitutes designated
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-2">
-                          {(state.lineups.activeLineupView === 'away' ? state.lineups.awayStartingXI : state.lineups.homeStartingXI).slice(0, state.lineups.rosterSize || 11).map((player: Player, idx: number) => {
-                            const isCap = player.isCaptain;
+                        {/* Head Coach Display Section */}
+                        <div className="border-t border-slate-800/80 pt-4 mt-4 bg-slate-950/45 -mx-5 -mb-5 p-5 pl-7">
+                          <span className="text-[9px] font-mono font-black text-teal-400 tracking-wider block uppercase mb-1 leading-none">
+                            HEAD COACH
+                          </span>
+                          <span className="text-xl font-black text-white uppercase tracking-tight block">
+                            {coach || 'UNASSIGNED'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right Panel: Vertical Tactical Pitch */}
+                      <div className="col-span-12 lg:col-span-8 flex flex-col bg-slate-950/60 backdrop-blur-md rounded-3xl border border-slate-800/80 p-4 h-full relative overflow-hidden shadow-2xl justify-between">
+                        {/* Top banner displaying the team title card */}
+                        <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5 mb-2.5">
+                          <div className="flex items-center gap-3">
+                            {teamLogo && (
+                              isImageUrl(teamLogo) ? (
+                                <img 
+                                  src={teamLogo} 
+                                  alt="" 
+                                  className="w-10 h-10 rounded-full border border-slate-700 bg-slate-900 object-cover" 
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <span className="text-3xl leading-none">{teamLogo}</span>
+                              )
+                            )}
+                            <div>
+                              <span className="text-[9px] font-mono text-slate-400 block uppercase leading-none mb-1">STARTING XI</span>
+                              <h2 className="text-xl font-black text-white uppercase tracking-tight leading-none">{teamName}</h2>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1 font-mono">
+                            <div className="text-right">
+                              <span className="text-[8px] text-slate-400 block uppercase leading-none font-bold">FORMATION</span>
+                              <span className="text-sm font-black text-teal-400 font-mono leading-none">
+                                {formation}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Field Arena (Vertical orientation, GK at bottom, FW at top) */}
+                        <div className="relative w-full h-[450px] bg-gradient-to-b from-emerald-950/30 to-emerald-900/10 rounded-2xl border border-slate-800/80 overflow-hidden shadow-inner flex-1">
+                          {/* Pitch Stripes Pattern */}
+                          <div className="absolute inset-0 flex flex-col pointer-events-none opacity-25">
+                            {[...Array(10)].map((_, stripeIdx) => (
+                              <div key={stripeIdx} className={`flex-1 ${stripeIdx % 2 === 0 ? 'bg-emerald-900/20' : 'bg-transparent'}`} />
+                            ))}
+                          </div>
+
+                          {/* SVG Tactical Pitch Lines */}
+                          <div className="absolute inset-0 pointer-events-none">
+                            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                              {/* Outer Line */}
+                              <rect x="4" y="4" width="92" height="92" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              {/* Center Line */}
+                              <line x1="4" y1="50" x2="96" y2="50" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              {/* Center Circle */}
+                              <circle cx="50" cy="50" r="14" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              {/* Penalty Box Top */}
+                              <rect x="22" y="4" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              <rect x="36" y="4" width="28" height="6" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              <path d="M 36 22 A 14 14 0 0 0 64 22" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              
+                              {/* Penalty Box Bottom */}
+                              <rect x="22" y="78" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              <rect x="36" y="90" width="28" height="6" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              <path d="M 36 78 A 14 14 0 0 1 64 78" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+
+                              {/* Corner Arcs */}
+                              <path d="M 4 8 A 4 4 0 0 0 8 4" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              <path d="M 92 4 A 4 4 0 0 0 96 8" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              <path d="M 8 96 A 4 4 0 0 0 4 92" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                              <path d="M 96 92 A 4 4 0 0 0 92 96" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+                            </svg>
+                          </div>
+
+                          {/* Player Circles placed on coordinates */}
+                          {roster.slice(0, state.lineups.rosterSize || 11).map((player: Player, playerIdx: number) => {
+                            const posX = Math.max(7, Math.min(93, player.y));
+                            const posY = Math.max(10, Math.min(90, 100 - player.x));
                             return (
-                              <motion.div 
-                                key={player.id}
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.04 }}
-                                className={`flex items-center gap-3 border rounded-xl px-4 py-3 transition-colors ${
-                                  isCap 
-                                    ? 'bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/40 shadow-sm shadow-amber-500/5' 
-                                    : 'bg-slate-950/40 hover:bg-slate-950/80 border-slate-850'
-                                }`}
+                              <motion.div
+                                key={player.id || playerIdx}
+                                initial={{ opacity: 0, scale: 0.7 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: playerIdx * 0.04, duration: 0.35, type: 'spring', stiffness: 80 }}
+                                className="absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 z-20 group"
+                                style={{ left: `${posX}%`, top: `${posY}%` }}
                               >
-                                <span className={`text-sm font-mono font-black w-5 ${isCap ? 'text-amber-400' : 'text-blue-500'}`}>{player.number}</span>
-                                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded uppercase font-bold ${
-                                  isCap ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'
-                                }`}>{player.position}</span>
-                                <span className="text-sm font-bold text-white flex-1 truncate">{player.name}</span>
-                                {isCap && (
-                                  <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded font-mono uppercase tracking-wider animate-pulse">
-                                    C
-                                  </span>
-                                )}
+                                <div className="relative mb-1 shadow-2xl">
+                                  {player.photoUrl ? (
+                                    <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 to-yellow-300 shadow-xl">
+                                      <div className="w-full h-full rounded-full bg-slate-900 overflow-hidden relative">
+                                        <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div 
+                                      className="w-11 h-11 rounded-full border-2 border-white shadow-xl flex items-center justify-center relative transition-transform group-hover:scale-105"
+                                      style={{
+                                        background: `radial-gradient(circle, ${teamColor || '#EF4444'} 0%, #020617 100%)`
+                                      }}
+                                    >
+                                      <span className="text-white font-mono font-black text-sm drop-shadow">
+                                        {player.number}
+                                      </span>
+                                      <div className="absolute inset-0 rounded-full border border-white/25 pointer-events-none" />
+                                    </div>
+                                  )}
+
+                                  {/* Captain Badge */}
+                                  {player.isCaptain && (
+                                    <div className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-amber-500 border border-slate-950 flex items-center justify-center text-[8px] font-black text-slate-950 shadow-md font-mono">
+                                      C
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Player Name Label Card */}
+                                <div className="flex items-center bg-slate-950 rounded border border-slate-800/80 shadow-2xl overflow-hidden max-w-[110px]">
+                                  <div 
+                                    className="text-white font-black px-1 py-0.5 text-[8px] font-mono text-center min-w-[16px] border-r border-slate-800"
+                                    style={{ backgroundColor: teamColor || '#EF4444' }}
+                                  >
+                                    {player.number}
+                                  </div>
+                                  <div className="text-white font-bold px-1.5 py-0.5 uppercase truncate text-[8px] font-sans">
+                                    {player.name.split(' ').pop() || player.name}
+                                  </div>
+                                </div>
                               </motion.div>
                             );
                           })}
                         </div>
                       </div>
-
-                      <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between mt-4">
-                        <div className="flex items-center gap-3">
-                          {state.lineups.activeLineupView === 'home' ? (
-                            state.settings.homeLogo && (
-                              isImageUrl(state.settings.homeLogo) ? (
-                                <img src={state.settings.homeLogo} alt="" className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900 object-cover" referrerPolicy="no-referrer" />
-                              ) : (
-                                <span className="text-3xl leading-none flex items-center justify-center w-10 h-10">{state.settings.homeLogo}</span>
-                              )
-                            )
-                          ) : (
-                            state.settings.awayLogo && (
-                              isImageUrl(state.settings.awayLogo) ? (
-                                <img src={state.settings.awayLogo} alt="" className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900 object-cover" referrerPolicy="no-referrer" />
-                              ) : (
-                                <span className="text-3xl leading-none flex items-center justify-center w-10 h-10">{state.settings.awayLogo}</span>
-                              )
-                            )
-                          )}
-                          <div>
-                            <span className="text-[10px] font-mono text-slate-400 block uppercase">TEAM CLUB</span>
-                            <span className="text-base font-black text-white block uppercase tracking-wide">
-                              {state.lineups.activeLineupView === 'away' ? state.settings.awayTeam : state.settings.homeTeam}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
                     </div>
-
-                    {/* Right Side (Col span 4): Featured Team Captain Card */}
-                    {(() => {
-                      const activeRoster = (state.lineups.activeLineupView === 'away' ? state.lineups.awayStartingXI : state.lineups.homeStartingXI).slice(0, state.lineups.rosterSize || 11);
-                      const captain = activeRoster.find((p: Player) => p.isCaptain) || activeRoster.find((p: Player) => p.position === 'MF') || activeRoster[0];
-                      return (
-                        <div className="col-span-4 flex flex-col justify-between bg-gradient-to-b from-amber-500/10 via-slate-900/60 to-slate-900/90 rounded-2xl border border-amber-500/20 p-6 relative overflow-hidden shadow-2xl">
-                          {/* Decorative backdrop */}
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-                          <div className="absolute -left-10 bottom-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-
-                          <div className="flex flex-col items-center text-center mt-2">
-                            {/* Captain Badge */}
-                            <div className="px-3 py-1 bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full flex items-center gap-1.5 shadow-md shadow-amber-500/10 mb-6">
-                              <Trophy className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-                              <span className="text-slate-950 text-[10px] font-black uppercase tracking-widest font-sans">
-                                Team Captain
-                              </span>
-                            </div>
-
-                            {/* Captain Portrait Frame */}
-                            <div className="relative mb-6">
-                              {/* Armband/Shield ornament */}
-                              <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-amber-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-950 shadow-md z-10 font-mono">
-                                C
-                              </div>
-                              <div className="w-40 h-40 rounded-full p-1 bg-gradient-to-tr from-amber-500 to-yellow-300 shadow-xl shadow-amber-500/10">
-                                <div className="w-full h-full rounded-full bg-slate-950 overflow-hidden relative border-4 border-slate-950">
-                                  {captain?.photoUrl ? (
-                                    <img 
-                                      src={captain.photoUrl} 
-                                      alt={captain.name} 
-                                      className="w-full h-full object-cover" 
-                                      referrerPolicy="no-referrer"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
-                                      <span className="text-4xl font-black">#{captain?.number}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Captain Info */}
-                            <span className="text-xs uppercase font-mono tracking-widest text-amber-400 font-bold">
-                              {captain?.position} • JERSEY #{captain?.number}
-                            </span>
-                            <h2 className="text-2xl font-black tracking-tight text-white mt-1 uppercase">
-                              {captain?.name || 'No Captain Designated'}
-                            </h2>
-                          </div>
-
-                          <div className="border-t border-slate-800/80 pt-4 mt-6 text-center">
-                            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
-                              LEADER ON THE PITCH
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
+                  );
+                })()}
             </div>
           </motion.div>
         )}
@@ -996,7 +1021,7 @@ export default function GraphicsOutput() {
                       )
                     )
                   )}
-                  <span className="text-xs uppercase font-mono tracking-widest text-emerald-400 font-bold">
+                  <span className="text-sm uppercase font-mono tracking-widest text-emerald-400 font-black">
                     {state.activeSubstitution.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam}
                   </span>
                 </div>
@@ -1004,8 +1029,8 @@ export default function GraphicsOutput() {
                 {/* Player IN (Green Arrow Up) */}
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">PLAYER IN</span>
-                    <span className="text-base font-black text-emerald-400 mt-0.5">{state.activeSubstitution.playerIn}</span>
+                    <span className="text-xs text-slate-400 uppercase tracking-wider font-mono font-bold">PLAYER IN</span>
+                    <span className="text-lg font-black text-emerald-400 mt-0.5">{state.activeSubstitution.playerIn}</span>
                   </div>
                   <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
                     <span className="text-lg font-bold">▲</span>
@@ -1015,8 +1040,8 @@ export default function GraphicsOutput() {
                 {/* Player OUT (Red Arrow Down) */}
                 <div className="flex items-center justify-between border-t border-slate-900/60 pt-3">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">PLAYER OUT</span>
-                    <span className="text-base font-black text-red-400 mt-0.5">{state.activeSubstitution.playerOut}</span>
+                    <span className="text-xs text-slate-400 uppercase tracking-wider font-mono font-bold">PLAYER OUT</span>
+                    <span className="text-lg font-black text-red-400 mt-0.5">{state.activeSubstitution.playerOut}</span>
                   </div>
                   <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center">
                     <span className="text-lg font-bold">▼</span>
@@ -1051,15 +1076,15 @@ export default function GraphicsOutput() {
               </div>
 
               {/* Stats entries */}
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4.5">
                 {/* Possession Stat */}
                 <div className="flex flex-col">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
-                    <span>{state.stats.possessionHome}%</span>
-                    <span>POSSESSION</span>
-                    <span>{100 - state.stats.possessionHome}%</span>
+                  <div className="flex justify-between items-end text-slate-200 mb-1.5 font-mono">
+                    <span className="text-lg font-black text-white">{state.stats.possessionHome}%</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-sans">POSSESSION</span>
+                    <span className="text-lg font-black text-white">{100 - state.stats.possessionHome}%</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">
+                  <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
                     <div style={{ width: `${state.stats.possessionHome}%` }} className="bg-blue-500 h-full" />
                     <div style={{ width: `${100 - state.stats.possessionHome}%` }} className="bg-slate-400 h-full" />
                   </div>
@@ -1067,12 +1092,12 @@ export default function GraphicsOutput() {
 
                 {/* Shots Stat */}
                 <div className="flex flex-col">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
-                    <span>{state.stats.shotsHome}</span>
-                    <span>TOTAL SHOTS</span>
-                    <span>{state.stats.shotsAway}</span>
+                  <div className="flex justify-between items-end text-slate-200 mb-1.5 font-mono">
+                    <span className="text-lg font-black text-white">{state.stats.shotsHome}</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-sans">TOTAL SHOTS</span>
+                    <span className="text-lg font-black text-white">{state.stats.shotsAway}</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">
+                  <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
                     <div style={{ width: `${(state.stats.shotsHome / (state.stats.shotsHome + state.stats.shotsAway || 1)) * 100}%` }} className="bg-blue-500 h-full" />
                     <div style={{ width: `${(state.stats.shotsAway / (state.stats.shotsHome + state.stats.shotsAway || 1)) * 100}%` }} className="bg-slate-400 h-full" />
                   </div>
@@ -1080,12 +1105,12 @@ export default function GraphicsOutput() {
 
                 {/* Shots On Target */}
                 <div className="flex flex-col">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
-                    <span>{state.stats.shotsOnTargetHome}</span>
-                    <span>SHOTS ON TARGET</span>
-                    <span>{state.stats.shotsOnTargetAway}</span>
+                  <div className="flex justify-between items-end text-slate-200 mb-1.5 font-mono">
+                    <span className="text-lg font-black text-white">{state.stats.shotsOnTargetHome}</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-sans">SHOTS ON TARGET</span>
+                    <span className="text-lg font-black text-white">{state.stats.shotsOnTargetAway}</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">
+                  <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
                     <div style={{ width: `${(state.stats.shotsOnTargetHome / (state.stats.shotsOnTargetHome + state.stats.shotsOnTargetAway || 1)) * 100}%` }} className="bg-blue-500 h-full" />
                     <div style={{ width: `${(state.stats.shotsOnTargetAway / (state.stats.shotsOnTargetHome + state.stats.shotsOnTargetAway || 1)) * 100}%` }} className="bg-slate-400 h-full" />
                   </div>
@@ -1093,12 +1118,12 @@ export default function GraphicsOutput() {
 
                 {/* corners */}
                 <div className="flex flex-col">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
-                    <span>{state.stats.cornersHome}</span>
-                    <span>CORNERS</span>
-                    <span>{state.stats.cornersAway}</span>
+                  <div className="flex justify-between items-end text-slate-200 mb-1.5 font-mono">
+                    <span className="text-lg font-black text-white">{state.stats.cornersHome}</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-sans">CORNERS</span>
+                    <span className="text-lg font-black text-white">{state.stats.cornersAway}</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">
+                  <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
                     <div style={{ width: `${(state.stats.cornersHome / (state.stats.cornersHome + state.stats.cornersAway || 1)) * 100}%` }} className="bg-blue-500 h-full" />
                     <div style={{ width: `${(state.stats.cornersAway / (state.stats.cornersHome + state.stats.cornersAway || 1)) * 100}%` }} className="bg-slate-400 h-full" />
                   </div>
@@ -1106,12 +1131,12 @@ export default function GraphicsOutput() {
 
                 {/* Expected Goals xG */}
                 <div className="flex flex-col">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
-                    <span>{state.stats.xGHome.toFixed(2)}</span>
-                    <span>Expected Goals (xG)</span>
-                    <span>{state.stats.xGAway.toFixed(2)}</span>
+                  <div className="flex justify-between items-end text-slate-200 mb-1.5 font-mono">
+                    <span className="text-lg font-black text-white">{state.stats.xGHome.toFixed(2)}</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-sans">Expected Goals (xG)</span>
+                    <span className="text-lg font-black text-white">{state.stats.xGAway.toFixed(2)}</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">
+                  <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
                     <div style={{ width: `${(state.stats.xGHome / (state.stats.xGHome + state.stats.xGAway || 1)) * 100}%` }} className="bg-blue-500 h-full" />
                     <div style={{ width: `${(state.stats.xGAway / (state.stats.xGHome + state.stats.xGAway || 1)) * 100}%` }} className="bg-slate-400 h-full" />
                   </div>
@@ -1119,12 +1144,12 @@ export default function GraphicsOutput() {
 
                 {/* Fouls */}
                 <div className="flex flex-col">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
-                    <span>{state.stats.foulsHome}</span>
-                    <span>FOULS COMMITTED</span>
-                    <span>{state.stats.foulsAway}</span>
+                  <div className="flex justify-between items-end text-slate-200 mb-1.5 font-mono">
+                    <span className="text-lg font-black text-white">{state.stats.foulsHome}</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-sans">FOULS COMMITTED</span>
+                    <span className="text-lg font-black text-white">{state.stats.foulsAway}</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">
+                  <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
                     <div style={{ width: `${(state.stats.foulsHome / (state.stats.foulsHome + state.stats.foulsAway || 1)) * 100}%` }} className="bg-blue-500 h-full" />
                     <div style={{ width: `${(state.stats.foulsAway / (state.stats.foulsHome + state.stats.foulsAway || 1)) * 100}%` }} className="bg-slate-400 h-full" />
                   </div>
@@ -1159,14 +1184,14 @@ export default function GraphicsOutput() {
             className="absolute bottom-16 left-16 pointer-events-none z-50"
             id="obs-lowerthird-popup"
           >
-            <div className="bg-slate-950/95 border-l-4 border-blue-500 rounded-r-2xl px-6 py-4 shadow-2xl shadow-black/80 flex flex-col min-w-[380px] max-w-[550px]">
-              <span className="text-[10px] font-mono tracking-widest text-blue-500 font-extrabold uppercase">
+            <div className="bg-slate-950/95 border-l-[8px] border-blue-500 rounded-r-3xl px-10 py-7 shadow-2xl shadow-black/95 flex flex-col min-w-[550px] max-w-[800px]">
+              <span className="text-xs font-mono tracking-[0.25em] text-blue-400 font-black uppercase">
                 {state.activeLowerThird.type} info
               </span>
-              <h2 className="text-2xl font-black text-white mt-1 leading-tight tracking-tight">
+              <h2 className="text-4xl font-black text-white mt-2 leading-none uppercase tracking-tight">
                 {state.activeLowerThird.title}
               </h2>
-              <p className="text-sm text-slate-400 font-medium mt-1">
+              <p className="text-lg text-slate-300 font-bold mt-2">
                 {state.activeLowerThird.subtitle}
               </p>
             </div>
@@ -1196,7 +1221,9 @@ export default function GraphicsOutput() {
                 {isImageUrl(state.activeSponsor.logoUrl) ? (
                   <img src={state.activeSponsor.logoUrl} alt="" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-3xl leading-none">{state.activeSponsor.logoUrl || '⭐'}</span>
+                  <div className="w-full h-full flex items-center justify-center text-blue-500 bg-blue-500/10 rounded-xl">
+                    <Trophy className="w-8 h-8 stroke-[1.5]" />
+                  </div>
                 )}
               </div>
 
@@ -1249,61 +1276,178 @@ export default function GraphicsOutput() {
       <AnimatePresence>
         {state.penaltyShootout.active && (
           <motion.div 
-            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 40, scale: 0.95 }}
-            className="absolute bottom-12 right-12 pointer-events-none z-50 origin-bottom-right"
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 22 }}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none z-50 origin-bottom w-[95%] max-w-[900px] flex flex-col items-center gap-1.5 select-none"
             id="obs-penalty-popup"
           >
-            <div className="bg-slate-950/95 border border-slate-800 rounded-2xl p-4 px-5 shadow-2xl shadow-black/95 flex flex-col items-center gap-3.5 min-w-[380px] max-w-[460px]">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-red-500 font-black">PENALTY SHOOTOUT</span>
+            {/* Main Scoreboard Bar */}
+            <div className="w-full bg-gradient-to-r from-red-950 via-rose-900 to-red-950 border border-amber-500/20 rounded-t-xl shadow-2xl flex items-center h-14">
               
-              <div className="grid grid-cols-2 gap-6 w-full">
-                {/* Home Penalties */}
-                <div className="flex flex-col items-center gap-2 border-r border-slate-800/80 pr-4">
-                  <span className="text-xs font-black text-white uppercase tracking-wider">{state.settings.homeTeam}</span>
-                  <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                    {Array.from({ length: Math.max(5, state.penaltyShootout.homeAttempts.length, state.penaltyShootout.awayAttempts.length) }, (_, idx) => {
-                      const res = state.penaltyShootout.homeAttempts[idx];
-                      return (
-                        <div key={idx} className="w-6 h-6 rounded-full border border-slate-700 bg-slate-900 flex items-center justify-center shrink-0">
-                          {res === 'goal' && <CheckCircle className="w-5 h-5 text-emerald-400 fill-emerald-950" />}
-                          {res === 'miss' && <XCircle className="w-5 h-5 text-red-500 fill-red-950" />}
-                          {res === undefined && <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+              {/* Home Team (Left Half) */}
+              <div className="flex-1 flex items-center justify-end gap-3 px-6 h-full">
+                {state.settings.homeLogo && (
+                  isImageUrl(state.settings.homeLogo) ? (
+                    <img 
+                      src={state.settings.homeLogo} 
+                      alt="" 
+                      className="w-8 h-5.5 object-cover rounded shadow-md border border-white/20" 
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="text-2xl leading-none flex items-center justify-center w-7 h-7">{state.settings.homeLogo}</span>
+                  )
+                )}
+                <div 
+                  className="w-[18px] h-[18px] rounded-full border-2 border-slate-950 ring-2 ring-white/20 shadow-inner shrink-0 ml-1.5"
+                  style={{ backgroundColor: state.settings.homeColor || '#EF4444' }}
+                />
+                <span className="font-sans font-black text-white text-base sm:text-xl tracking-wider uppercase truncate">
+                  {state.settings.homeTeam}
+                </span>
+              </div>
 
-                {/* Away Penalties */}
-                <div className="flex flex-col items-center gap-2 pl-4">
-                  <span className="text-xs font-black text-white uppercase tracking-wider">{state.settings.awayTeam}</span>
-                  <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                    {Array.from({ length: Math.max(5, state.penaltyShootout.homeAttempts.length, state.penaltyShootout.awayAttempts.length) }, (_, idx) => {
-                      const res = state.penaltyShootout.awayAttempts[idx];
-                      return (
-                        <div key={idx} className="w-6 h-6 rounded-full border border-slate-700 bg-slate-900 flex items-center justify-center shrink-0">
-                          {res === 'goal' && <CheckCircle className="w-5 h-5 text-emerald-400 fill-emerald-950" />}
-                          {res === 'miss' && <XCircle className="w-5 h-5 text-red-500 fill-red-950" />}
-                          {res === undefined && <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />}
-                        </div>
-                      );
-                    })}
+              {/* Center Penalty Score Box */}
+              <div className="w-44 flex items-center justify-center h-full bg-black/45 border-x border-white/10 relative px-2">
+                <div className="flex items-center gap-3">
+                  {/* Home Penalty Goals */}
+                  <span className="text-3xl font-mono font-black text-white px-2 tracking-tight">
+                    {state.penaltyShootout.homeAttempts.filter(x => x === 'goal').length}
+                  </span>
+                  
+                  {/* Central Tournament Logo / Emblem */}
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center shadow-2xl border-2 border-amber-400/40 p-1.5 select-none shrink-0 z-10 relative">
+                    {state.settings.competitionLogo ? (
+                      isImageUrl(state.settings.competitionLogo) ? (
+                        <img 
+                          src={state.settings.competitionLogo} 
+                          alt="Tournament Logo" 
+                          className="w-full h-full object-contain rounded-full" 
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="text-white font-sans font-black text-sm leading-none text-center">
+                          {state.settings.competitionLogo}
+                        </span>
+                      )
+                    ) : (
+                      <Trophy className="w-7 h-7 text-amber-400 stroke-[2.5]" />
+                    )}
                   </div>
+
+                  {/* Away Penalty Goals */}
+                  <span className="text-3xl font-mono font-black text-white px-2 tracking-tight">
+                    {state.penaltyShootout.awayAttempts.filter(x => x === 'goal').length}
+                  </span>
                 </div>
               </div>
 
-              {state.penaltyShootout.winner && (
-                <motion.div 
-                  initial={{ scale: 0.9 }}
-                  animate={{ scale: 1 }}
-                  className="bg-gradient-to-r from-yellow-500 to-amber-600 rounded-full px-4 py-1 text-slate-950 font-black text-xs uppercase tracking-widest mt-1 shadow-lg"
-                >
-                  Winner: {state.penaltyShootout.winner === 'home' ? state.settings.homeTeam : state.settings.awayTeam} 🎉
-                </motion.div>
-              )}
+              {/* Away Team (Right Half) */}
+              <div className="flex-1 flex items-center justify-start gap-3 px-6 h-full">
+                <span className="font-sans font-black text-white text-base sm:text-xl tracking-wider uppercase truncate">
+                  {state.settings.awayTeam}
+                </span>
+                <div 
+                  className="w-[18px] h-[18px] rounded-full border-2 border-slate-950 ring-2 ring-white/20 shadow-inner shrink-0 mr-1.5"
+                  style={{ backgroundColor: state.settings.awayColor || '#3B82F6' }}
+                />
+                {state.settings.awayLogo && (
+                  isImageUrl(state.settings.awayLogo) ? (
+                    <img 
+                      src={state.settings.awayLogo} 
+                      alt="" 
+                      className="w-8 h-5.5 object-cover rounded shadow-md border border-white/20" 
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="text-2xl leading-none flex items-center justify-center w-7 h-7">{state.settings.awayLogo}</span>
+                  )
+                )}
+              </div>
             </div>
+
+            {/* Bottom Panel with Penalty Indicators and Sponsor Banner */}
+            <div className="w-full bg-slate-950/95 border-x border-b border-slate-800 rounded-b-xl px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl">
+              
+              {/* Home Team Attempts (Left) */}
+              <div className="flex items-center gap-2 flex-1 justify-center sm:justify-end">
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.max(5, state.penaltyShootout.homeAttempts.length, state.penaltyShootout.awayAttempts.length) }, (_, idx) => {
+                    const res = state.penaltyShootout.homeAttempts[idx];
+                    return (
+                      <div 
+                        key={`home-p-${idx}`} 
+                        className="relative flex items-center justify-center w-6 h-6 select-none"
+                      >
+                        <div 
+                          className={`w-5 h-5 rotate-45 flex items-center justify-center transition-all duration-300 rounded-[3px] border ${
+                            res === 'goal' 
+                              ? 'bg-emerald-500 border-emerald-400 text-white shadow-md shadow-emerald-500/20' 
+                              : res === 'miss' 
+                                ? 'bg-red-600 border-red-500 text-white shadow-md shadow-red-600/20' 
+                                : 'bg-slate-900 border-slate-700 text-slate-500'
+                          }`}
+                        >
+                          <span className="-rotate-45 block text-[10px] font-mono font-black">
+                            {idx + 1}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Central Sponsor Badge */}
+              <div className="flex items-center justify-center">
+                <div className="bg-blue-600/90 text-white font-mono font-black text-xs px-6 py-1 rounded-full shadow-md border border-blue-400/20 uppercase tracking-widest max-w-[350px] truncate select-none">
+                  {state.settings.leagueName || 'TOURNAMENT'}
+                </div>
+              </div>
+
+              {/* Away Team Attempts (Right) */}
+              <div className="flex items-center gap-2 flex-1 justify-center sm:justify-start">
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.max(5, state.penaltyShootout.homeAttempts.length, state.penaltyShootout.awayAttempts.length) }, (_, idx) => {
+                    const res = state.penaltyShootout.awayAttempts[idx];
+                    return (
+                      <div 
+                        key={`away-p-${idx}`} 
+                        className="relative flex items-center justify-center w-6 h-6 select-none"
+                      >
+                        <div 
+                          className={`w-5 h-5 rotate-45 flex items-center justify-center transition-all duration-300 rounded-[3px] border ${
+                            res === 'goal' 
+                              ? 'bg-emerald-500 border-emerald-400 text-white shadow-md shadow-emerald-500/20' 
+                              : res === 'miss' 
+                                ? 'bg-red-600 border-red-500 text-white shadow-md shadow-red-600/20' 
+                                : 'bg-slate-900 border-slate-700 text-slate-500'
+                          }`}
+                        >
+                          <span className="-rotate-45 block text-[10px] font-mono font-black">
+                            {idx + 1}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Winner Celebration Banner */}
+            {state.penaltyShootout.winner && (
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 rounded-full px-8 py-2 text-slate-950 font-black text-sm uppercase tracking-widest mt-2 shadow-2xl flex items-center gap-2 animate-bounce select-none border border-yellow-300"
+              >
+                <Sparkles className="w-4 h-4 text-slate-950 fill-slate-950 animate-pulse" />
+                <span>Winner: {state.penaltyShootout.winner === 'home' ? state.settings.homeTeam : state.settings.awayTeam} 🎉</span>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1314,132 +1458,158 @@ export default function GraphicsOutput() {
       <AnimatePresence>
         {state.activeWinnerAnnounce && (
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 80 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+            className="absolute bottom-12 left-1/2 -translate-x-1/2 w-full max-w-5xl px-6 z-[100] pointer-events-none"
             id="obs-winner-overlay"
           >
-            {/* Animated Golden Sparkles in Background */}
-            <div className="absolute inset-0 overflow-hidden">
-              {[...Array(20)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ 
-                    y: '110%', 
-                    x: `${Math.random() * 100}%`,
-                    scale: Math.random() * 0.8 + 0.4,
-                    opacity: 0 
-                  }}
-                  animate={{ 
-                    y: '-10%', 
-                    opacity: [0, 0.8, 0.8, 0],
-                    rotate: 360
-                  }}
-                  transition={{ 
-                    duration: Math.random() * 4 + 3, 
-                    repeat: Infinity,
-                    delay: Math.random() * 2
-                  }}
-                  className="absolute text-amber-400 font-bold"
-                  style={{ fontSize: `${Math.random() * 15 + 10}px` }}
-                >
-                  ⭐
-                </motion.div>
-              ))}
-            </div>
+            {/* Subtle premium gold radial ambient light glow underneath banner */}
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/10 to-amber-500/0 blur-2xl opacity-75 rounded-full pointer-events-none" />
 
-            <motion.div
-              initial={{ scale: 0.8, y: 50, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.8, y: 50, opacity: 0 }}
-              transition={{ type: 'spring', damping: 15 }}
-              className="bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-amber-500/30 rounded-3xl p-8 shadow-2xl shadow-amber-500/5 flex flex-col items-center max-w-lg w-full relative overflow-hidden text-center"
-            >
-              {/* Gold Top Light effect */}
-              <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
+            {/* Premium Glassmorphism Horizontal Banner Container */}
+            <div className="relative w-full bg-gradient-to-r from-slate-950/95 via-slate-900/98 to-slate-950/95 border-2 border-amber-500/50 rounded-2xl p-4.5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] shadow-amber-500/5 backdrop-blur-md flex items-center justify-between gap-6 overflow-hidden">
               
-              {/* Trophy Crown */}
-              <motion.div 
-                animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 3 }}
-                className="w-20 h-20 bg-gradient-to-br from-amber-400 via-yellow-300 to-amber-500 rounded-full flex items-center justify-center shadow-xl shadow-amber-500/20 mb-6 border-4 border-amber-200"
-              >
-                <Trophy className="w-10 h-10 text-slate-950 stroke-[2.5]" />
-              </motion.div>
-
-              <span className="text-amber-400 font-mono text-xs uppercase tracking-[0.25em] font-black mb-1">
-                {state.activeWinnerAnnounce.customTitle || 'MATCH CHAMPIONS'}
-              </span>
-
-              {/* Winner Name */}
-              {state.activeWinnerAnnounce.winner === 'home' && (
-                <div className="flex flex-col items-center mt-2 mb-6">
-                  {state.settings.homeLogo && (
-                    isImageUrl(state.settings.homeLogo) ? (
-                      <img 
-                        src={state.settings.homeLogo} 
-                        alt="" 
-                        className="w-16 h-16 object-cover rounded-full border-2 border-amber-400/50 shadow-md mb-3" 
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span className="text-4xl mb-3 block">{state.settings.homeLogo}</span>
-                    )
-                  )}
-                  <h1 className="text-4xl font-black text-white uppercase tracking-tight leading-tight">
-                    {state.settings.homeTeam}
-                  </h1>
+              {/* Premium top gold linear strip indicator */}
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
+              
+              {/* Left Section: Trophy Container & Title */}
+              <div className="flex items-center gap-4.5 shrink-0">
+                {(() => {
+                  const winner = state.activeWinnerAnnounce.winner;
+                  const teamLogo = winner === 'home' ? state.settings.homeLogo : (winner === 'away' ? state.settings.awayLogo : null);
+                  
+                  if (teamLogo) {
+                    if (isImageUrl(teamLogo)) {
+                      return (
+                        <img 
+                          src={teamLogo} 
+                          alt="" 
+                          className="w-14 h-14 object-cover rounded-xl border-2 border-amber-500 shadow-lg shadow-amber-500/30 shrink-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                      );
+                    } else {
+                      return (
+                        <div className="w-14 h-14 bg-slate-950 border-2 border-amber-500 rounded-xl flex items-center justify-center text-3xl shadow-lg shrink-0">
+                          {teamLogo}
+                        </div>
+                      );
+                    }
+                  }
+                  return (
+                    <motion.div 
+                      animate={{ rotate: [0, -8, 8, -4, 4, 0], scale: [1, 1.05, 1] }}
+                      transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 3.5 }}
+                      className="w-14 h-14 bg-gradient-to-br from-amber-400 via-yellow-300 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30 border border-amber-200 shrink-0"
+                    >
+                      <Trophy className="w-7 h-7 text-slate-950 stroke-[2.5]" />
+                    </motion.div>
+                  );
+                })()}
+                <div className="flex flex-col text-left">
+                  <span className="text-amber-400 font-mono text-[9px] font-black uppercase tracking-[0.25em] leading-none mb-1.5">
+                    {state.activeWinnerAnnounce.winner === 'draw' ? 'MATCH COMPLETED' : 'CONGRATULATIONS'}
+                  </span>
+                  <span className="text-white text-xl font-black uppercase tracking-tight leading-none flex items-center gap-2">
+                    {state.activeWinnerAnnounce.winner === 'draw' ? 'HONOURS EVEN' : (state.activeWinnerAnnounce.customTitle === 'CHAMPION IS' ? 'CHAMPION IS' : 'WINNER IS')}
+                  </span>
                 </div>
-              )}
-
-              {state.activeWinnerAnnounce.winner === 'away' && (
-                <div className="flex flex-col items-center mt-2 mb-6">
-                  {state.settings.awayLogo && (
-                    isImageUrl(state.settings.awayLogo) ? (
-                      <img 
-                        src={state.settings.awayLogo} 
-                        alt="" 
-                        className="w-16 h-16 object-cover rounded-full border-2 border-amber-400/50 shadow-md mb-3" 
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span className="text-4xl mb-3 block">{state.settings.awayLogo}</span>
-                    )
-                  )}
-                  <h1 className="text-4xl font-black text-white uppercase tracking-tight leading-tight">
-                    {state.settings.awayTeam}
-                  </h1>
-                </div>
-              )}
-
-              {state.activeWinnerAnnounce.winner === 'draw' && (
-                <div className="flex flex-col items-center mt-2 mb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    {isImageUrl(state.settings.homeLogo) ? <img src={state.settings.homeLogo} alt="" className="w-10 h-10 object-cover rounded-full" referrerPolicy="no-referrer" /> : <span className="text-2xl">{state.settings.homeLogo}</span>}
-                    <span className="text-slate-400 font-bold text-sm">VS</span>
-                    {isImageUrl(state.settings.awayLogo) ? <img src={state.settings.awayLogo} alt="" className="w-10 h-10 object-cover rounded-full" referrerPolicy="no-referrer" /> : <span className="text-2xl">{state.settings.awayLogo}</span>}
-                  </div>
-                  <h1 className="text-3xl font-black text-white uppercase tracking-tight leading-tight">
-                    HONOURS EVEN
-                  </h1>
-                </div>
-              )}
-
-              {/* Score breakdown card */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl py-3 px-6 w-full flex items-center justify-center gap-4 mb-3">
-                <span className="font-mono text-sm font-bold text-slate-400 uppercase">{state.settings.homeTeam.substring(0, 3)}</span>
-                <span className="font-mono text-2xl font-black text-white">{state.scoreboard.homeScore}</span>
-                <span className="text-slate-600 font-bold">:</span>
-                <span className="font-mono text-2xl font-black text-white">{state.scoreboard.awayScore}</span>
-                <span className="font-mono text-sm font-bold text-slate-400 uppercase">{state.settings.awayTeam.substring(0, 3)}</span>
               </div>
 
-              {/* Bottom text details */}
-              <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase">
-                {state.settings.leagueName} • {state.settings.location}
-              </span>
-            </motion.div>
+              {/* Center Section: Main Champion Display with Highlighted Logo */}
+              <div className="flex items-center gap-4 px-6 py-2 bg-slate-950/70 border border-amber-500/20 rounded-xl relative overflow-hidden flex-1 justify-center max-w-md shadow-inner">
+                {/* Gold diagonal shimmer effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-400/5 to-transparent -skew-x-12 translate-x-[-100%] animate-[shimmer_3.5s_infinite]" />
+                
+                {state.activeWinnerAnnounce.winner === 'home' && (
+                  <div className="flex items-center gap-3.5">
+                    {state.settings.homeLogo && (
+                      isImageUrl(state.settings.homeLogo) ? (
+                        <img 
+                          src={state.settings.homeLogo} 
+                          alt="" 
+                          className="w-11 h-11 object-cover rounded-full border-2 border-amber-400/60 shadow-md shrink-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="text-3xl shrink-0">{state.settings.homeLogo}</span>
+                      )
+                    )}
+                    <div className="text-left">
+                      <h1 className="text-2xl font-black text-white uppercase tracking-tight leading-none">
+                        {state.settings.homeTeam}
+                      </h1>
+                      <span className="text-[9px] font-mono text-amber-400 font-black tracking-widest uppercase leading-none block mt-1.5">
+                        {state.activeWinnerAnnounce.customTitle === 'CHAMPION IS' ? 'CHAMPIONS' : 'WINNERS'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {state.activeWinnerAnnounce.winner === 'away' && (
+                  <div className="flex items-center gap-3.5">
+                    {state.settings.awayLogo && (
+                      isImageUrl(state.settings.awayLogo) ? (
+                        <img 
+                          src={state.settings.awayLogo} 
+                          alt="" 
+                          className="w-11 h-11 object-cover rounded-full border-2 border-amber-400/60 shadow-md shrink-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="text-3xl shrink-0">{state.settings.awayLogo}</span>
+                      )
+                    )}
+                    <div className="text-left">
+                      <h1 className="text-2xl font-black text-white uppercase tracking-tight leading-none">
+                        {state.settings.awayTeam}
+                      </h1>
+                      <span className="text-[9px] font-mono text-amber-400 font-black tracking-widest uppercase leading-none block mt-1.5">
+                        {state.activeWinnerAnnounce.customTitle === 'CHAMPION IS' ? 'CHAMPIONS' : 'WINNERS'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {state.activeWinnerAnnounce.winner === 'draw' && (
+                  <div className="flex items-center gap-3.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isImageUrl(state.settings.homeLogo) ? <img src={state.settings.homeLogo} alt="" className="w-7 h-7 object-cover rounded-full" referrerPolicy="no-referrer" /> : <span className="text-xl">{state.settings.homeLogo}</span>}
+                      <span className="text-slate-500 font-black text-[10px]">VS</span>
+                      {isImageUrl(state.settings.awayLogo) ? <img src={state.settings.awayLogo} alt="" className="w-7 h-7 object-cover rounded-full" referrerPolicy="no-referrer" /> : <span className="text-xl">{state.settings.awayLogo}</span>}
+                    </div>
+                    <div className="text-left">
+                      <h1 className="text-base font-black text-white uppercase tracking-tight leading-none">
+                        {state.settings.homeTeam} & {state.settings.awayTeam}
+                      </h1>
+                      <span className="text-[9px] font-mono text-amber-400 font-black tracking-widest uppercase leading-none block mt-1.5">MATCH COMPLETED (TIE)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Section: Score breakdown card & Metadata */}
+              <div className="flex flex-col items-end gap-1.5 shrink-0 text-right">
+                <div className="bg-slate-950/90 border border-slate-800/80 rounded-xl py-1.5 px-4.5 flex items-center justify-center gap-3 shadow-inner">
+                  <span className="font-mono text-[10px] font-black text-slate-400 uppercase tracking-wider">{state.settings.homeTeamShort}</span>
+                  <span className="font-mono text-xl font-black text-white bg-slate-900 px-2 py-0.5 rounded border border-slate-800/60">{state.scoreboard.homeScore}</span>
+                  <span className="text-slate-500 font-bold text-sm">:</span>
+                  <span className="font-mono text-xl font-black text-white bg-slate-900 px-2 py-0.5 rounded border border-slate-800/60">{state.scoreboard.awayScore}</span>
+                  <span className="font-mono text-[10px] font-black text-slate-400 uppercase tracking-wider">{state.settings.awayTeamShort}</span>
+                  {(state.penaltyShootout.winner || state.penaltyShootout.homeAttempts.length > 0 || state.penaltyShootout.awayAttempts.length > 0) && (
+                    <span className="text-amber-400 font-mono text-xs font-black bg-slate-900 border border-amber-500/30 px-1.5 py-0.5 rounded ml-1 animate-pulse">
+                      ({state.penaltyShootout.homeAttempts.filter(x => x === 'goal').length}-{state.penaltyShootout.awayAttempts.filter(x => x === 'goal').length})
+                    </span>
+                  )}
+                </div>
+                <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block leading-none">
+                  {state.settings.leagueName} • {state.settings.location}
+                </span>
+              </div>
+
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1453,108 +1623,120 @@ export default function GraphicsOutput() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-slate-950/90 backdrop-blur-lg z-[90] flex items-center justify-center pointer-events-none"
+            className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/85 z-[90] flex flex-col justify-between p-16 text-center pointer-events-none select-none"
             id="obs-welcome-overlay"
           >
             {/* Ambient glowing orbs */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-600/15 rounded-full blur-[120px] pointer-events-none" />
+            
+            {/* Subtle background overlay pattern */}
+            <div className="absolute inset-0 bg-[radial-gradient(#ffffff04_1px,transparent_1px)] [background-size:24px_24px] opacity-60 pointer-events-none" />
 
-            <motion.div
-              initial={{ scale: 0.9, y: 30, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.9, y: 30, opacity: 0 }}
-              transition={{ type: 'spring', damping: 18 }}
-              className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-10 max-w-3xl w-full flex flex-col items-center relative overflow-hidden shadow-2xl text-center"
-            >
-              {/* Light accent bar */}
-              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
-
-              {/* Tournament Info Header */}
-              <div className="flex flex-col items-center gap-3 mb-6">
-                {state.settings.competitionLogo && (
-                  isImageUrl(state.settings.competitionLogo) ? (
-                    <img 
-                      src={state.settings.competitionLogo} 
-                      alt="" 
-                      className="w-20 h-20 object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]" 
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <span className="text-5xl leading-none">{state.settings.competitionLogo}</span>
-                  )
-                )}
-                <div className="mt-2">
-                  <span className="text-blue-500 font-mono text-xs uppercase tracking-[0.25em] font-black block mb-1">
-                    LIVE BROADCAST PRE-SHOW
-                  </span>
-                  <h1 className="text-4xl font-black text-white tracking-wide uppercase">
-                    {state.settings.leagueName}
-                  </h1>
-                  <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest mt-1 block">
-                    {state.settings.season || '2026/2027'} EDITION
-                  </span>
-                </div>
-              </div>
-
-              {/* Matchup Banner */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl px-8 py-5 w-full flex items-center justify-between gap-6 my-4 shadow-inner">
-                {/* Home Team */}
-                <div className="flex items-center gap-3 flex-1 justify-end">
-                  <span className="text-lg font-black text-white uppercase tracking-tight truncate">{state.settings.homeTeam}</span>
-                  {state.settings.homeLogo && (
-                    isImageUrl(state.settings.homeLogo) ? (
-                      <img src={state.settings.homeLogo} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-800" referrerPolicy="no-referrer" />
-                    ) : (
-                      <span className="text-2xl leading-none">{state.settings.homeLogo}</span>
-                    )
-                  )}
-                </div>
-
-                {/* VS Indicator */}
-                <div className="px-3.5 py-1.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-black font-mono tracking-widest uppercase">
-                  VS
-                </div>
-
-                {/* Away Team */}
-                <div className="flex items-center gap-3 flex-1 justify-start">
-                  {state.settings.awayLogo && (
-                    isImageUrl(state.settings.awayLogo) ? (
-                      <img src={state.settings.awayLogo} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-800" referrerPolicy="no-referrer" />
-                    ) : (
-                      <span className="text-2xl leading-none">{state.settings.awayLogo}</span>
-                    )
-                  )}
-                  <span className="text-lg font-black text-white uppercase tracking-tight truncate">{state.settings.awayTeam}</span>
-                </div>
-              </div>
-
-              {/* Welcome text */}
-              <div className="my-6">
-                <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 uppercase tracking-tight animate-pulse">
-                  WELCOME TO THE MATCH
+            {/* Cinematic top header */}
+            <div className="flex flex-col items-center gap-4 mt-4 z-10">
+              {state.settings.competitionLogo && (
+                isImageUrl(state.settings.competitionLogo) ? (
+                  <img 
+                    src={state.settings.competitionLogo} 
+                    alt="" 
+                    className="w-24 h-24 object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.4)]" 
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="text-6xl leading-none">{state.settings.competitionLogo}</span>
+                )
+              )}
+              <div>
+                <span className="text-blue-400 font-mono text-xs uppercase tracking-[0.4em] font-black block mb-1">
+                  LIVE BROADCAST PRE-SHOW
                 </span>
-                <p className="text-xs text-slate-400 mt-2 font-mono uppercase tracking-wider">
-                  The action is about to begin. Adjust your audio, sit back, and enjoy the coverage.
-                </p>
+                <h1 className="text-5xl font-black text-white tracking-wider uppercase leading-none">
+                  {state.settings.leagueName}
+                </h1>
+                <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest mt-2 block">
+                  {state.settings.season || '2026/2027'} EDITION
+                </span>
+              </div>
+            </div>
+
+            {/* Giant Matchup Face-off (Middle Section) */}
+            <div className="flex items-center justify-center gap-16 my-auto z-10">
+              {/* Home Side */}
+              <div className="flex flex-col items-center w-[380px]">
+                <div className="w-80 h-80 rounded-[2.5rem] p-1.5 bg-gradient-to-tr from-blue-500 to-indigo-500 shadow-[0_20px_50px_rgba(59,130,246,0.15)] mb-6 transition-transform duration-300 hover:scale-105">
+                  <div className="w-full h-full rounded-[2.3rem] bg-slate-950 overflow-hidden relative border-4 border-slate-950 flex items-center justify-center p-8">
+                    {state.settings.homeLogo ? (
+                      isImageUrl(state.settings.homeLogo) ? (
+                        <img src={state.settings.homeLogo} alt="" className="max-w-full max-h-full object-contain rounded-2xl" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-9xl leading-none">{state.settings.homeLogo}</span>
+                      )
+                    ) : (
+                      <span className="text-8xl font-black font-mono text-slate-600">{state.settings.homeTeamShort || 'H'}</span>
+                    )}
+                  </div>
+                </div>
+                <h2 className="text-4xl font-black text-white uppercase tracking-tight truncate w-full text-center">
+                  {state.settings.homeTeam}
+                </h2>
               </div>
 
-              {/* Tournament Details Grid */}
-              <div className="grid grid-cols-3 divide-x divide-slate-850 gap-4 w-full border-t border-slate-800 pt-6 text-xs font-mono text-slate-400 mt-2">
-                <div className="px-2 text-center">
-                  <span className="text-[10px] text-slate-500 block uppercase mb-1">STADIUM VENUE</span>
-                  <span className="text-white font-bold">{state.settings.location}</span>
-                </div>
-                <div className="px-2 text-center">
-                  <span className="text-[10px] text-slate-500 block uppercase mb-1">KICKOFF TIME</span>
-                  <span className="text-white font-bold">{state.settings.kickoffTime}</span>
-                </div>
-                <div className="px-2 text-center">
-                  <span className="text-[10px] text-slate-500 block uppercase mb-1">MATCH REFEREE</span>
-                  <span className="text-white font-bold">{state.settings.referee}</span>
+              {/* Massive VS Indicator */}
+              <div className="flex flex-col items-center">
+                <div className="px-10 py-5 bg-gradient-to-b from-amber-950/60 to-red-950/60 border-2 border-orange-500/40 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-pulse flex items-center justify-center">
+                  <span className="text-5xl font-black font-mono tracking-[0.1em] pl-2 uppercase bg-clip-text text-transparent bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 drop-shadow-[0_2px_10px_rgba(239,68,68,0.5)]">
+                    VS
+                  </span>
                 </div>
               </div>
-            </motion.div>
+
+              {/* Away Side */}
+              <div className="flex flex-col items-center w-[380px]">
+                <div className="w-80 h-80 rounded-[2.5rem] p-1.5 bg-gradient-to-tr from-blue-500 to-indigo-500 shadow-[0_20px_50px_rgba(59,130,246,0.15)] mb-6 transition-transform duration-300 hover:scale-105">
+                  <div className="w-full h-full rounded-[2.3rem] bg-slate-950 overflow-hidden relative border-4 border-slate-950 flex items-center justify-center p-8">
+                    {state.settings.awayLogo ? (
+                      isImageUrl(state.settings.awayLogo) ? (
+                        <img src={state.settings.awayLogo} alt="" className="max-w-full max-h-full object-contain rounded-2xl" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-9xl leading-none">{state.settings.awayLogo}</span>
+                      )
+                    ) : (
+                      <span className="text-8xl font-black font-mono text-slate-600">{state.settings.awayTeamShort || 'A'}</span>
+                    )}
+                  </div>
+                </div>
+                <h2 className="text-4xl font-black text-white uppercase tracking-tight truncate w-full text-center">
+                  {state.settings.awayTeam}
+                </h2>
+              </div>
+            </div>
+
+            {/* Welcome banner text */}
+            <div className="mb-6 z-10">
+              <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 uppercase tracking-[0.1em] animate-pulse">
+                WELCOME TO THE MATCH
+              </span>
+              <p className="text-xs text-slate-400 mt-2.5 font-mono uppercase tracking-widest max-w-xl mx-auto leading-relaxed">
+                The action is about to begin. Adjust your audio, sit back, and enjoy the coverage.
+              </p>
+            </div>
+
+            {/* Stadium details footer */}
+            <div className="grid grid-cols-3 divide-x divide-slate-850 gap-4 w-full border-t border-slate-800/80 pt-6 text-xs font-mono text-slate-400 z-10 mb-4 max-w-4xl mx-auto">
+              <div className="px-2 text-center">
+                <span className="text-[10px] text-slate-500 block uppercase mb-1 font-bold">STADIUM VENUE</span>
+                <span className="text-white font-bold text-sm uppercase">{state.settings.location}</span>
+              </div>
+              <div className="px-2 text-center">
+                <span className="text-[10px] text-slate-500 block uppercase mb-1 font-bold">KICKOFF TIME</span>
+                <span className="text-white font-bold text-sm uppercase">{state.settings.kickoffTime}</span>
+              </div>
+              <div className="px-2 text-center">
+                <span className="text-[10px] text-slate-500 block uppercase mb-1 font-bold">MATCH REFEREE</span>
+                <span className="text-white font-bold text-sm uppercase">{state.settings.referee}</span>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

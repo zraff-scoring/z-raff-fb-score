@@ -79,6 +79,7 @@ const FORMATION_PRESETS: Record<string, { x: number; y: number; position: 'GK' |
 export default function LineupsCategory({ state, updateState }: LineupsCategoryProps) {
   // Editing state for which team's roster is being edited
   const [editTeam, setEditTeam] = useState<'home' | 'away'>('home');
+  const [editRosterType, setEditRosterType] = useState<'starters' | 'subs'>('starters');
 
   // Trigger lineup display overlay to go on / off air
   const setLineupView = (view: 'home' | 'away' | 'vs' | null) => {
@@ -115,6 +116,31 @@ export default function LineupsCategory({ state, updateState }: LineupsCategoryP
         lineups: {
           ...prev.lineups,
           [team === 'home' ? 'homeStartingXI' : 'awayStartingXI']: targetXI,
+        }
+      };
+    });
+  };
+
+  // Inline sub player edit handlers
+  const handleSubPlayerChange = (team: 'home' | 'away', index: number, field: keyof Player, value: any) => {
+    updateState((prev) => {
+      let targetSubs = team === 'home' ? [...(prev.lineups.homeSubs || [])] : [...(prev.lineups.awaySubs || [])];
+      
+      // Ensure targetSubs array is large enough
+      while (targetSubs.length <= index) {
+        targetSubs.push({ id: `sub-${team}-${Date.now()}-${targetSubs.length}`, name: '', number: targetSubs.length + 12, position: 'MF' });
+      }
+
+      targetSubs[index] = {
+        ...targetSubs[index],
+        [field]: value,
+      };
+
+      return {
+        ...prev,
+        lineups: {
+          ...prev.lineups,
+          [team === 'home' ? 'homeSubs' : 'awaySubs']: targetSubs,
         }
       };
     });
@@ -160,9 +186,20 @@ export default function LineupsCategory({ state, updateState }: LineupsCategoryP
     }));
   };
 
+  const handleCoachPhotoChange = (team: 'home' | 'away', photoUrl: string) => {
+    updateState((prev) => ({
+      ...prev,
+      lineups: {
+        ...prev.lineups,
+        [team === 'home' ? 'homeCoachPhotoUrl' : 'awayCoachPhotoUrl']: photoUrl,
+      }
+    }));
+  };
+
   const activeXI = editTeam === 'home' ? state.lineups.homeStartingXI : state.lineups.awayStartingXI;
   const activeFormation = editTeam === 'home' ? state.lineups.homeFormation : state.lineups.awayFormation;
   const activeCoach = editTeam === 'home' ? state.lineups.homeCoach : state.lineups.awayCoach;
+  const activeCoachPhoto = editTeam === 'home' ? (state.lineups.homeCoachPhotoUrl || '') : (state.lineups.awayCoachPhotoUrl || '');
   const teamDisplayName = editTeam === 'home' ? state.settings.homeTeam : state.settings.awayTeam;
 
   return (
@@ -237,17 +274,65 @@ export default function LineupsCategory({ state, updateState }: LineupsCategoryP
               </div>
 
               <div className="flex items-center gap-2">
+                <label className="text-[10px] font-mono text-slate-400 uppercase font-bold">Formation:</label>
+                <select 
+                  value={activeFormation || '4-3-3'}
+                  onChange={(e) => handleApplyFormation(editTeam, e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white font-bold focus:outline-none focus:border-blue-500 cursor-pointer"
+                  id="select-lineups-formation"
+                >
+                  {Object.keys(FORMATION_PRESETS).map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
                 <label className="text-[10px] font-mono text-slate-500 uppercase">Head Coach:</label>
                 <input 
                   type="text"
                   value={activeCoach}
                   onChange={(e) => handleCoachChange(editTeam, e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white max-w-[150px] font-bold focus:outline-none focus:border-blue-500"
+                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white max-w-[120px] font-bold focus:outline-none focus:border-blue-500"
                   placeholder="Coach Name"
                   id="input-lineups-coach"
                 />
               </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-mono text-slate-500 uppercase">Coach Image:</label>
+                <input 
+                  type="text"
+                  value={activeCoachPhoto}
+                  onChange={(e) => handleCoachPhotoChange(editTeam, e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white max-w-[150px] font-mono focus:outline-none focus:border-blue-500"
+                  placeholder="Direct Image URL (Optional)"
+                  id="input-lineups-coach-photo"
+                />
+              </div>
             </div>
+          </div>
+
+          {/* ROSTER TYPE SELECTOR */}
+          <div className="flex bg-slate-950/60 p-1.5 rounded-xl border border-slate-850 self-start gap-2 mb-1">
+            <button 
+              onClick={() => setEditRosterType('starters')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                editRosterType === 'starters' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+              id="btn-lineup-edit-starters"
+            >
+              Starting XI Starters
+            </button>
+            <button 
+              onClick={() => setEditRosterType('subs')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                editRosterType === 'subs' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+              id="btn-lineup-edit-subs"
+            >
+              Substitutes Bench
+            </button>
           </div>
 
           {/* TABLE OF PLAYERS */}
@@ -258,19 +343,38 @@ export default function LineupsCategory({ state, updateState }: LineupsCategoryP
                   <th className="px-3 py-2 w-16 text-center">Jersey</th>
                   <th className="px-3 py-2">Full Player Name</th>
                   <th className="px-3 py-2 w-32 text-center">Role / Position</th>
-                  <th className="px-3 py-2 w-24 text-center">Captain</th>
-                  <th className="px-3 py-2">Portrait URL (Captain Only)</th>
+                  {editRosterType === 'starters' && (
+                    <th className="px-3 py-2 w-24 text-center">Captain</th>
+                  )}
+                  <th className="px-3 py-2">Portrait URL (Optional)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-850">
-                {activeXI.slice(0, state.lineups.rosterSize || 11).map((player, idx) => (
+                {(editRosterType === 'starters'
+                  ? activeXI.slice(0, state.lineups.rosterSize || 11)
+                  : (() => {
+                       const activeSubs = editTeam === 'home' ? (state.lineups.homeSubs || []) : (state.lineups.awaySubs || []);
+                       const paddedSubs = [...activeSubs];
+                       while (paddedSubs.length < 12) {
+                         paddedSubs.push({ id: `sub-${editTeam}-pad-${paddedSubs.length}`, name: '', number: paddedSubs.length + 12, position: 'MF' });
+                       }
+                       return paddedSubs;
+                     })()
+                ).map((player, idx) => (
                   <tr key={player.id || idx} className="hover:bg-slate-950/40">
                     {/* Jersey number */}
                     <td className="px-3 py-1.5 text-center">
                       <input 
                         type="number"
                         value={player.number}
-                        onChange={(e) => handlePlayerChange(editTeam, idx, 'number', parseInt(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          if (editRosterType === 'starters') {
+                            handlePlayerChange(editTeam, idx, 'number', val);
+                          } else {
+                            handleSubPlayerChange(editTeam, idx, 'number', val);
+                          }
+                        }}
                         className="bg-slate-950 border border-slate-800 text-center rounded px-1.5 py-1 text-xs w-11 text-white font-mono focus:outline-none focus:border-blue-500"
                         min="1"
                         max="99"
@@ -282,7 +386,13 @@ export default function LineupsCategory({ state, updateState }: LineupsCategoryP
                       <input 
                         type="text"
                         value={player.name}
-                        onChange={(e) => handlePlayerChange(editTeam, idx, 'name', e.target.value)}
+                        onChange={(e) => {
+                          if (editRosterType === 'starters') {
+                            handlePlayerChange(editTeam, idx, 'name', e.target.value);
+                          } else {
+                            handleSubPlayerChange(editTeam, idx, 'name', e.target.value);
+                          }
+                        }}
                         className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs w-full text-white font-medium focus:outline-none focus:border-blue-500"
                         placeholder="Player Name"
                       />
@@ -292,7 +402,13 @@ export default function LineupsCategory({ state, updateState }: LineupsCategoryP
                     <td className="px-3 py-1.5">
                       <select 
                         value={player.position}
-                        onChange={(e) => handlePlayerChange(editTeam, idx, 'position', e.target.value)}
+                        onChange={(e) => {
+                          if (editRosterType === 'starters') {
+                            handlePlayerChange(editTeam, idx, 'position', e.target.value);
+                          } else {
+                            handleSubPlayerChange(editTeam, idx, 'position', e.target.value);
+                          }
+                        }}
                         className="bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-xs w-full text-white focus:outline-none focus:border-blue-500"
                       >
                         <option value="GK">GK (Goalkeeper)</option>
@@ -302,29 +418,34 @@ export default function LineupsCategory({ state, updateState }: LineupsCategoryP
                       </select>
                     </td>
 
-                    {/* Captain */}
-                    <td className="px-3 py-1.5 text-center">
-                      <input 
-                        type="checkbox"
-                        checked={!!player.isCaptain}
-                        onChange={(e) => handlePlayerChange(editTeam, idx, 'isCaptain', e.target.checked)}
-                        className="w-4 h-4 rounded accent-blue-500 cursor-pointer"
-                      />
-                    </td>
-
-                     {/* Portrait Photo URL (Captain Only) */}
-                    <td className="px-3 py-1.5">
-                      {player.isCaptain ? (
+                    {editRosterType === 'starters' && (
+                      <td className="px-3 py-1.5 text-center">
                         <input 
-                          type="text"
-                          value={player.photoUrl || ''}
-                          onChange={(e) => handlePlayerChange(editTeam, idx, 'photoUrl', e.target.value)}
-                          className="bg-slate-950 border border-amber-500/50 rounded px-2.5 py-1 text-[11px] w-full text-amber-300 focus:outline-none focus:border-amber-500 font-mono shadow-sm"
-                          placeholder="Captain Portrait URL (https://...)"
+                          type="checkbox"
+                          checked={!!player.isCaptain}
+                          onChange={(e) => handlePlayerChange(editTeam, idx, 'isCaptain', e.target.checked)}
+                          className="w-4 h-4 rounded accent-blue-500 cursor-pointer"
                         />
-                      ) : (
-                        <span className="text-slate-600 text-[10px] font-mono italic px-2">Captain Only</span>
-                      )}
+                      </td>
+                    )}
+
+                    {/* Portrait Photo URL (All Players) */}
+                    <td className="px-3 py-1.5">
+                      <input 
+                        type="text"
+                        value={player.photoUrl || ''}
+                        onChange={(e) => {
+                          if (editRosterType === 'starters') {
+                            handlePlayerChange(editTeam, idx, 'photoUrl', e.target.value);
+                          } else {
+                            handleSubPlayerChange(editTeam, idx, 'photoUrl', e.target.value);
+                          }
+                        }}
+                        className={`bg-slate-950 border rounded px-2.5 py-1 text-[11px] w-full text-blue-300 focus:outline-none focus:border-blue-500 font-mono shadow-sm ${
+                          player.isCaptain ? 'border-amber-500/50 text-amber-300' : 'border-slate-800'
+                        }`}
+                        placeholder={player.isCaptain ? "Captain Portrait URL" : "Portrait URL (Optional)"}
+                      />
                     </td>
                   </tr>
                 ))}

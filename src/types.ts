@@ -14,6 +14,8 @@ export type TimerPeriod = '1ST' | '2ND' | 'OT1' | 'OT2' | 'PEN' | 'FT';
 export interface MatchSettings {
   homeTeam: string;
   awayTeam: string;
+  homeTeamShort: string;
+  awayTeamShort: string;
   homeLogo: string;
   awayLogo: string;
   leagueName: string;
@@ -22,6 +24,8 @@ export interface MatchSettings {
   kickoffTime: string;
   competitionLogo: string;
   season: string;
+  homeColor?: string;
+  awayColor?: string;
 }
 
 export interface ScoreboardState {
@@ -34,11 +38,14 @@ export interface TimerState {
   isRunning: boolean;
   period: TimerPeriod;
   injuryTimeMinutes: number;
+  customStatus?: string | null;
 }
 
 export interface LineupState {
   homeCoach: string;
   awayCoach: string;
+  homeCoachPhotoUrl?: string;
+  awayCoachPhotoUrl?: string;
   homeFormation: string;
   awayFormation: string;
   homeStartingXI: Player[];
@@ -143,6 +150,8 @@ export interface BroadcastState {
   activeReplay: boolean;
   hideAllGraphics: boolean;
   hideScoreboard?: boolean;
+  hideClassicScoreboard?: boolean;
+  hideWorldcupScoreboard?: boolean;
   hideTimer?: boolean;
   scoreboardStyle?: 'classic' | 'worldcup';
   activeWinnerAnnounce?: {
