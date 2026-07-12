@@ -28,9 +28,17 @@ export interface MatchSettings {
   awayColor?: string;
 }
 
+export interface GoalEvent {
+  id: string;
+  team: 'home' | 'away';
+  scorer: string;
+  minute: number;
+}
+
 export interface ScoreboardState {
   homeScore: number;
   awayScore: number;
+  goals?: GoalEvent[];
 }
 
 export interface TimerState {

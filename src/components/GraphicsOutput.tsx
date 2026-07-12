@@ -14,6 +14,102 @@ const isImageUrl = (val?: string) => {
   return trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/') || trimmed.startsWith('data:') || trimmed.includes('.') || trimmed.includes('/');
 };
 
+function ClassicGoalBanner({ activeGoal, state }: { activeGoal: any; state: any }) {
+  const [phase, setPhase] = useState<'scrolling' | 'arrived'>('scrolling');
+
+  useEffect(() => {
+    setPhase('scrolling');
+    // Transition to arrived phase after 1.8 seconds
+    const timer = setTimeout(() => {
+      setPhase('arrived');
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, [activeGoal]);
+
+  return (
+    <motion.div
+      initial={{ width: 0, opacity: 0 }}
+      animate={{ width: '100%', opacity: 1 }}
+      exit={{ width: 0, opacity: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 z-50 flex items-center justify-between overflow-hidden rounded-xl shadow-inner border border-yellow-300/40"
+    >
+      <AnimatePresence mode="wait">
+        {phase === 'scrolling' ? (
+          <motion.div
+            key="scrolling-phase"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="w-full h-full flex items-center justify-center overflow-hidden whitespace-nowrap relative bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500"
+          >
+            <motion.div
+              initial={{ x: "60%" }}
+              animate={{ x: "-100%" }}
+              transition={{
+                repeat: Infinity,
+                duration: 4.5,
+                ease: "linear",
+              }}
+              className="text-slate-950 font-black text-4xl sm:text-5xl tracking-[0.25em] font-sans uppercase absolute select-none flex items-center gap-16"
+            >
+              <span>GOAL</span>
+              <span>GOAL</span>
+              <span>GOAL</span>
+              <span>GOAL</span>
+              <span>GOAL</span>
+            </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="arrived-phase"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="w-full h-full flex items-center justify-between px-10 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500"
+          >
+            {/* Left Big Bold GOAL */}
+            <motion.div 
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.05, duration: 0.3 }}
+              className="text-slate-950 font-black text-4xl tracking-tight font-sans select-none"
+            >
+              GOAL
+            </motion.div>
+
+            {/* Center Scorer details */}
+            <motion.div 
+              initial={{ y: 15, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.15, duration: 0.3 }}
+              className="flex flex-col items-center justify-center text-center font-sans"
+            >
+              <span className="text-slate-950 font-extrabold text-lg tracking-wide leading-none">
+                {activeGoal.scorer || 'Goal'}
+              </span>
+              <span className="text-slate-950 font-extrabold text-sm tracking-tight mt-1 leading-none font-sans">
+                ({activeGoal.minute})
+              </span>
+            </motion.div>
+
+            {/* Right Big Bold GOAL */}
+            <motion.div 
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.05, duration: 0.3 }}
+              className="text-slate-950 font-black text-4xl tracking-tight font-sans select-none"
+            >
+              GOAL
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 export default function GraphicsOutput() {
   const { state } = useBroadcast();
   const [replayActive, setReplayActive] = useState(false);
@@ -90,30 +186,7 @@ export default function GraphicsOutput() {
             {/* IN-SCOREBOARD MODERN GOAL FLASH BANNER */}
             <AnimatePresence>
               {state.activeGoal && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: '100%', opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 z-50 flex items-center justify-between px-6 overflow-hidden rounded-xl"
-                >
-                  <div className="flex items-center gap-3 whitespace-nowrap">
-                    <span className="bg-slate-950 text-yellow-400 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider animate-bounce">
-                      GOAL!
-                    </span>
-                    <span className="text-slate-950 font-black text-sm uppercase tracking-wide font-sans">
-                      {state.activeGoal.scorer ? state.activeGoal.scorer.toUpperCase() : ((state.activeGoal.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam) || 'GOAL SCORED!').toUpperCase()}
-                    </span>
-                    <span className="text-slate-950/60 font-mono text-xs font-bold">
-                      ({state.activeGoal.minute}')
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 whitespace-nowrap bg-slate-950/10 px-3 py-1 rounded-lg border border-slate-950/10">
-                    <span className="text-slate-950 font-black text-sm font-mono">
-                      {state.settings.homeTeamShort} {state.scoreboard.homeScore} - {state.scoreboard.awayScore} {state.settings.awayTeamShort}
-                    </span>
-                  </div>
-                </motion.div>
+                <ClassicGoalBanner activeGoal={state.activeGoal} state={state} />
               )}
             </AnimatePresence>
 
@@ -301,32 +374,71 @@ export default function GraphicsOutput() {
                 className="flex flex-col items-center"
                 id="obs-scoreboard-worldcup"
               >
-            {/* IN-SCOREBOARD MODERN GOAL FLASH BANNER FOR WORLDCUP */}
-            <AnimatePresence>
-              {state.activeGoal && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 50, opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 rounded-t-xl flex items-center justify-between px-6 overflow-hidden border-t border-x border-amber-400 shadow-lg shadow-amber-500/10"
+            {/* IN-SCOREBOARD MODERN GOAL FLASH BANNER FOR WORLDCUP (DISABLED AS REQUESTED) */}
+
+            {/* WORLDCUP SCORERS TOP BAR */}
+            {(() => {
+              const goals = state.scoreboard.goals || [];
+              const homeGoals = goals.filter(g => g.team === 'home');
+              const awayGoals = goals.filter(g => g.team === 'away');
+
+              if (homeGoals.length === 0 && awayGoals.length === 0) return null;
+
+              // Group home goals by scorer
+              const homeScorersMap: { [name: string]: number[] } = {};
+              homeGoals.forEach(g => {
+                const scorerName = g.scorer || 'Goal';
+                if (!homeScorersMap[scorerName]) homeScorersMap[scorerName] = [];
+                homeScorersMap[scorerName].push(g.minute);
+              });
+              const homeLines = Object.entries(homeScorersMap).map(([name, minutes]) => {
+                return `${name}- ${minutes.join(', ')}`;
+              });
+
+              // Group away goals by scorer
+              const awayScorersMap: { [name: string]: number[] } = {};
+              awayGoals.forEach(g => {
+                const scorerName = g.scorer || 'Goal';
+                if (!awayScorersMap[scorerName]) awayScorersMap[scorerName] = [];
+                awayScorersMap[scorerName].push(g.minute);
+              });
+              const awayLines = Object.entries(awayScorersMap).map(([name, minutes]) => {
+                return `${name} ${minutes.join(', ')}`;
+              });
+
+              // Calculate offsets based on visible columns
+              const hasCompetitionLogo = !state.hideScoreboard;
+              const hasTimer = !state.hideTimer || state.timer.customStatus;
+
+              const leftOffset = hasCompetitionLogo ? 'left-[112px]' : 'left-0';
+              const rightOffset = hasTimer 
+                ? (state.timer.customStatus ? 'right-[180px]' : 'right-[130px]') 
+                : 'right-0';
+
+              return (
+                <div 
+                  className={`absolute bottom-[79px] ${leftOffset} ${rightOffset} bg-[#4a586e]/95 backdrop-blur-md border border-slate-800 border-b-0 rounded-t-xl px-5 py-2.5 flex justify-between items-start text-white z-30 shadow-lg select-none min-h-[32px] pointer-events-auto`}
                 >
-                  <div className="flex items-center gap-2 whitespace-nowrap">
-                    <span className="bg-slate-950 text-yellow-400 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider animate-bounce">
-                      GOAL!
-                    </span>
-                    <span className="text-slate-950 font-black text-sm uppercase tracking-wide">
-                      {state.activeGoal.scorer ? state.activeGoal.scorer.toUpperCase() : ((state.activeGoal.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam) || 'GOAL SCORED!').toUpperCase()}
-                    </span>
-                    <span className="text-slate-950/60 font-mono text-[11px] font-bold">
-                      ({state.activeGoal.minute}')
-                    </span>
+                  {/* Home scorers */}
+                  <div className="flex flex-col items-start gap-1 max-w-[48%]">
+                    {homeLines.map((line, i) => (
+                      <span key={`h-scorer-${i}`} className="text-[11px] font-sans font-semibold text-slate-100 tracking-tight leading-none whitespace-nowrap">
+                        {line}
+                      </span>
+                    ))}
                   </div>
-                  <div className="text-slate-950 font-black text-sm font-mono">
-                    {state.settings.homeTeamShort} {state.scoreboard.homeScore} - {state.scoreboard.awayScore} {state.settings.awayTeamShort}
+
+                  {/* Away scorers */}
+                  <div className="flex flex-col items-end gap-1 max-w-[48%] text-right ml-auto">
+                    {awayLines.map((line, i) => (
+                      <span key={`a-scorer-${i}`} className="text-[11px] font-sans font-semibold text-slate-100 tracking-tight leading-none whitespace-nowrap font-medium">
+                        {line}
+                      </span>
+                    ))}
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+              );
+            })()}
 
             {/* Main World Cup Layout */}
             <div className="flex items-center bg-slate-950/95 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl shadow-black/95 overflow-visible h-20">

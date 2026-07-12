@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, Activity, Star, Circle, CheckCircle2, XCircle, RotateCcw, RefreshCw, EyeOff, LayoutGrid, Globe } from 'lucide-react';
+import { Trophy, Activity, Star, Circle, CheckCircle2, XCircle, RotateCcw, RefreshCw, EyeOff, LayoutGrid, Globe, Plus, Trash2 } from 'lucide-react';
 import { BroadcastState, Player } from '../types.js';
 
 interface ScoreboardCategoryProps {
@@ -25,11 +25,40 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
     updateState((prev) => {
       const currentScore = team === 'home' ? prev.scoreboard.homeScore : prev.scoreboard.awayScore;
       const newScore = Math.max(0, currentScore + amount);
+      
+      const currentGoals = prev.scoreboard.goals || [];
+      let updatedGoals = [...currentGoals];
+      
+      if (amount > 0) {
+        // Add a placeholder goal record
+        const calculatedMinute = Math.floor(prev.timer.timeSeconds / 60) + 1;
+        // Try to pick a name from team's starting XI, or fall back to "Goal"
+        const startingXI = team === 'home' ? prev.lineups.homeStartingXI : prev.lineups.awayStartingXI;
+        const fallbackScorer = startingXI && startingXI.length > 0 
+          ? startingXI[Math.floor(Math.random() * startingXI.length)].name 
+          : 'Goal';
+          
+        updatedGoals.push({
+          id: Math.random().toString(36).substring(2, 9),
+          team,
+          scorer: fallbackScorer,
+          minute: calculatedMinute
+        });
+      } else if (amount < 0) {
+        // Remove last goal for this team
+        const teamGoals = updatedGoals.filter(g => g.team === team);
+        if (teamGoals.length > 0) {
+          const lastGoalId = teamGoals[teamGoals.length - 1].id;
+          updatedGoals = updatedGoals.filter(g => g.id !== lastGoalId);
+        }
+      }
+
       return {
         ...prev,
         scoreboard: {
           ...prev.scoreboard,
           [team === 'home' ? 'homeScore' : 'awayScore']: newScore,
+          goals: updatedGoals
         }
       };
     });
@@ -38,7 +67,7 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
   const handleResetScores = () => {
     updateState((prev) => ({
       ...prev,
-      scoreboard: { homeScore: 0, awayScore: 0 }
+      scoreboard: { homeScore: 0, awayScore: 0, goals: [] }
     }));
   };
 
@@ -55,12 +84,20 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
         ? (goalTeam === 'home' ? prev.scoreboard.homeScore + 1 : prev.scoreboard.awayScore + 1)
         : null;
 
-      const updatedScoreboard = nextScore !== null 
-        ? {
-            ...prev.scoreboard,
-            [goalTeam === 'home' ? 'homeScore' : 'awayScore']: nextScore
-          }
-        : prev.scoreboard;
+      const currentGoals = prev.scoreboard.goals || [];
+      const newGoal = {
+        id: Math.random().toString(36).substring(2, 9),
+        team: goalTeam,
+        scorer: finalScorer || 'Goal',
+        minute: calculatedMinute
+      };
+
+      const updatedScoreboard = {
+        ...prev.scoreboard,
+        homeScore: nextScore !== null && goalTeam === 'home' ? nextScore : prev.scoreboard.homeScore,
+        awayScore: nextScore !== null && goalTeam === 'away' ? nextScore : prev.scoreboard.awayScore,
+        goals: [...currentGoals, newGoal]
+      };
 
       return {
         ...prev,
@@ -231,6 +268,219 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
                   id="btn-score-away-plus"
                 >
                   +1
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Real-time Goals & Scorers List (Syncs with World Cup style Scoreboard) */}
+          <div className="border-t border-slate-800/80 pt-4 mt-4 mb-4">
+            <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-1.5 font-sans">
+              <Trophy className="w-3.5 h-3.5 text-yellow-500" />
+              World Cup Scorers & Times
+            </h3>
+            
+            {/* List of active scorers */}
+            <div className="grid grid-cols-2 gap-4 text-xs font-mono mb-4">
+              {/* Home Goals */}
+              <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-850">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block border-b border-slate-850/80 pb-1.5 mb-2 truncate">
+                  {state.settings.homeTeamShort || 'HOME'} Goals
+                </span>
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                  {(!state.scoreboard.goals || state.scoreboard.goals.filter(g => g.team === 'home').length === 0) ? (
+                    <span className="text-slate-600 text-[10px] italic">No goals registered</span>
+                  ) : (
+                    state.scoreboard.goals.filter(g => g.team === 'home').map((goal) => (
+                      <div key={goal.id} className="flex flex-col gap-1 bg-slate-900/80 p-1.5 rounded border border-slate-800">
+                        <input 
+                          type="text" 
+                          value={goal.scorer}
+                          onChange={(e) => {
+                            const newName = e.target.value;
+                            updateState(prev => ({
+                              ...prev,
+                              scoreboard: {
+                                ...prev.scoreboard,
+                                goals: (prev.scoreboard.goals || []).map(g => g.id === goal.id ? { ...g, scorer: newName } : g)
+                              }
+                            }));
+                          }}
+                          placeholder="Scorer name"
+                          className="bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-blue-500 w-full font-sans font-semibold"
+                        />
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-slate-500">Min:</span>
+                            <input 
+                              type="number" 
+                              value={goal.minute}
+                              onChange={(e) => {
+                                const newMin = parseInt(e.target.value) || 1;
+                                updateState(prev => ({
+                                  ...prev,
+                                  scoreboard: {
+                                    ...prev.scoreboard,
+                                    goals: (prev.scoreboard.goals || []).map(g => g.id === goal.id ? { ...g, minute: newMin } : g)
+                                  }
+                                }));
+                              }}
+                              className="bg-slate-950 border border-slate-800 rounded w-10 px-1 text-[10px] text-amber-500 text-center font-bold"
+                            />
+                          </div>
+                          <button 
+                            onClick={() => {
+                              updateState(prev => ({
+                                ...prev,
+                                scoreboard: {
+                                  ...prev.scoreboard,
+                                  homeScore: Math.max(0, prev.scoreboard.homeScore - 1),
+                                  goals: (prev.scoreboard.goals || []).filter(g => g.id !== goal.id)
+                                }
+                              }));
+                            }}
+                            className="text-slate-500 hover:text-red-500 transition-colors p-0.5 cursor-pointer"
+                            title="Delete goal"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Away Goals */}
+              <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-850">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block border-b border-slate-850/80 pb-1.5 mb-2 truncate">
+                  {state.settings.awayTeamShort || 'AWAY'} Goals
+                </span>
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                  {(!state.scoreboard.goals || state.scoreboard.goals.filter(g => g.team === 'away').length === 0) ? (
+                    <span className="text-slate-600 text-[10px] italic">No goals registered</span>
+                  ) : (
+                    state.scoreboard.goals.filter(g => g.team === 'away').map((goal) => (
+                      <div key={goal.id} className="flex flex-col gap-1 bg-slate-900/80 p-1.5 rounded border border-slate-800">
+                        <input 
+                          type="text" 
+                          value={goal.scorer}
+                          onChange={(e) => {
+                            const newName = e.target.value;
+                            updateState(prev => ({
+                              ...prev,
+                              scoreboard: {
+                                ...prev.scoreboard,
+                                goals: (prev.scoreboard.goals || []).map(g => g.id === goal.id ? { ...g, scorer: newName } : g)
+                              }
+                            }));
+                          }}
+                          placeholder="Scorer name"
+                          className="bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-blue-500 w-full font-sans font-semibold"
+                        />
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-slate-500">Min:</span>
+                            <input 
+                              type="number" 
+                              value={goal.minute}
+                              onChange={(e) => {
+                                const newMin = parseInt(e.target.value) || 1;
+                                updateState(prev => ({
+                                  ...prev,
+                                  scoreboard: {
+                                    ...prev.scoreboard,
+                                    goals: (prev.scoreboard.goals || []).map(g => g.id === goal.id ? { ...g, minute: newMin } : g)
+                                  }
+                                }));
+                              }}
+                              className="bg-slate-950 border border-slate-800 rounded w-10 px-1 text-[10px] text-amber-500 text-center font-bold"
+                            />
+                          </div>
+                          <button 
+                            onClick={() => {
+                              updateState(prev => ({
+                                ...prev,
+                                scoreboard: {
+                                  ...prev.scoreboard,
+                                  awayScore: Math.max(0, prev.scoreboard.awayScore - 1),
+                                  goals: (prev.scoreboard.goals || []).filter(g => g.id !== goal.id)
+                                }
+                              }));
+                            }}
+                            className="text-slate-500 hover:text-red-500 transition-colors p-0.5 cursor-pointer"
+                            title="Delete goal"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick manual goal scorer adder */}
+            <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-850 font-sans">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block mb-2">Quick Add Goal Record</span>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select 
+                  id="quick-goal-team"
+                  className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white cursor-pointer focus:outline-none focus:border-blue-500 shrink-0 font-sans"
+                >
+                  <option value="home">{state.settings.homeTeamShort || 'HOME'}</option>
+                  <option value="away">{state.settings.awayTeamShort || 'AWAY'}</option>
+                </select>
+                
+                <input 
+                  id="quick-goal-scorer"
+                  type="text" 
+                  placeholder="Scorer Name" 
+                  className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 flex-1 min-w-0 font-sans font-semibold"
+                />
+
+                <input 
+                  id="quick-goal-minute"
+                  type="number" 
+                  defaultValue={Math.floor(state.timer.timeSeconds / 60) + 1}
+                  placeholder="Min" 
+                  className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 w-14 text-center font-mono shrink-0 font-bold text-amber-500"
+                />
+
+                <button 
+                  onClick={() => {
+                    const teamSelect = document.getElementById('quick-goal-team') as HTMLSelectElement;
+                    const scorerInput = document.getElementById('quick-goal-scorer') as HTMLInputElement;
+                    const minuteInput = document.getElementById('quick-goal-minute') as HTMLInputElement;
+                    
+                    const team = teamSelect?.value as 'home' | 'away';
+                    const scorer = scorerInput?.value?.trim() || 'Goal';
+                    const minute = parseInt(minuteInput?.value) || Math.floor(state.timer.timeSeconds / 60) + 1;
+
+                    updateState(prev => {
+                      const currentGoals = prev.scoreboard.goals || [];
+                      const newGoal = {
+                        id: Math.random().toString(36).substring(2, 9),
+                        team,
+                        scorer,
+                        minute
+                      };
+                      return {
+                        ...prev,
+                        scoreboard: {
+                          ...prev.scoreboard,
+                          [team === 'home' ? 'homeScore' : 'awayScore']: prev.scoreboard[team === 'home' ? 'homeScore' : 'awayScore'] + 1,
+                          goals: [...currentGoals, newGoal]
+                        }
+                      };
+                    });
+
+                    if (scorerInput) scorerInput.value = '';
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer shrink-0 font-sans"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add
                 </button>
               </div>
             </div>

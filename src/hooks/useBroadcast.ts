@@ -70,6 +70,7 @@ export const DEFAULT_STATE: BroadcastState = {
   scoreboard: {
     homeScore: 0,
     awayScore: 0,
+    goals: [],
   },
   timer: {
     timeSeconds: 0,
