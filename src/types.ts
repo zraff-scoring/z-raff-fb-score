@@ -162,6 +162,10 @@ export interface BroadcastState {
   hideWorldcupScoreboard?: boolean;
   hideTimer?: boolean;
   scoreboardStyle?: 'classic' | 'worldcup';
+  classicSponsorText?: string;
+  classicSponsorVisible?: boolean;
+  classicRoundText?: string;
+  classicRoundVisible?: boolean;
   activeWinnerAnnounce?: {
     winner: 'home' | 'away' | 'draw' | null;
     customTitle?: string;

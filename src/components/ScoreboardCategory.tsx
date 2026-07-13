@@ -556,6 +556,71 @@ export default function ScoreboardCategory({ state, updateState }: ScoreboardCat
             </div>
           </div>
 
+          {/* Classic Theme Additions: Sponsor & Tournament Round */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-4 mb-4">
+            <span className="text-xs font-black text-slate-300 uppercase tracking-wider block border-b border-slate-850 pb-2">
+              Classic Theme Custom Overlay Accessories
+            </span>
+            
+            {/* Sponsor Controls */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">Classic Sponsor Header Overlay</span>
+                <button
+                  onClick={() => updateState(prev => ({ ...prev, classicSponsorVisible: !prev.classicSponsorVisible }))}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    state.classicSponsorVisible
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-slate-900 border border-slate-800 text-slate-400'
+                  }`}
+                >
+                  {state.classicSponsorVisible ? 'Sponsor: ON' : 'Sponsor: OFF'}
+                </button>
+              </div>
+              <input
+                type="text"
+                value={state.classicSponsorText || ''}
+                onChange={(e) => updateState(prev => ({ ...prev, classicSponsorText: e.target.value }))}
+                placeholder="Enter Sponsor Name"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-semibold"
+              />
+            </div>
+
+            {/* Round Controls */}
+            <div className="space-y-2 pt-2 border-t border-slate-850">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">Classic Tournament Round Footer Overlay</span>
+                <button
+                  onClick={() => updateState(prev => ({ ...prev, classicRoundVisible: !prev.classicRoundVisible }))}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    state.classicRoundVisible
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-900 border border-slate-800 text-slate-400'
+                  }`}
+                >
+                  {state.classicRoundVisible ? 'Round: ON' : 'Round: OFF'}
+                </button>
+              </div>
+              
+              {/* Round selection buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {['Round of 32', 'Round of 16', 'Quarter-Final', 'Semi-Final', 'Final'].map((round) => (
+                  <button
+                    key={round}
+                    onClick={() => updateState(prev => ({ ...prev, classicRoundText: round, classicRoundVisible: true }))}
+                    className={`px-2 py-1.5 rounded-lg text-[10px] font-black transition-all truncate cursor-pointer ${
+                      state.classicRoundText === round && state.classicRoundVisible
+                        ? 'bg-blue-600 text-white border border-blue-500'
+                        : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 hover:text-slate-300'
+                    }`}
+                  >
+                    {round}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-850">
             <div>
               <span className="text-xs font-bold text-white block">Master Stream Overlay Toggle</span>

@@ -134,6 +134,10 @@ export const DEFAULT_STATE: BroadcastState = {
   hideWorldcupScoreboard: false,
   hideTimer: false,
   scoreboardStyle: 'classic',
+  classicSponsorText: 'Sponsor Name',
+  classicSponsorVisible: false,
+  classicRoundText: 'Semi-Final',
+  classicRoundVisible: false,
   activeWinnerAnnounce: null,
   activeWelcome: false,
   activeTicker: {

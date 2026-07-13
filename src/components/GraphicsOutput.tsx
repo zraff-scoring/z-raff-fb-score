@@ -180,9 +180,40 @@ export default function GraphicsOutput() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
             transition={{ type: 'spring', damping: 20 }}
-            className="absolute top-6 left-8 flex items-center bg-slate-950/90 backdrop-blur-md rounded-xl border border-slate-800 shadow-2xl shadow-black/80 overflow-visible"
+            className="absolute top-8 left-8 flex items-center bg-slate-950/90 backdrop-blur-md rounded-xl border border-slate-800 shadow-2xl shadow-black/80 overflow-visible"
             id="obs-scoreboard"
           >
+            {/* SPONSOR BAR ON TOP OF SCOREBOARD */}
+            <AnimatePresence>
+              {state.classicSponsorVisible && state.classicSponsorText && (
+                <motion.div 
+                  initial={{ y: 24, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 24, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 120, damping: 15 }}
+                  className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#3c4a63] border border-slate-700/50 border-b-0 rounded-t-xl px-12 py-1 text-[11px] font-sans font-extrabold text-[#f3e63d] tracking-widest uppercase shadow-md whitespace-nowrap z-[-1] min-h-[26px] flex items-center justify-center pointer-events-none"
+                >
+                  {state.classicSponsorText}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ROUND BAR UNDERNEATH SCOREBOARD */}
+            <AnimatePresence>
+              {state.classicRoundVisible && state.classicRoundText && (
+                <motion.div 
+                  initial={{ y: -24, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -24, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 120, damping: 15 }}
+                  className="absolute -bottom-6.5 left-1/2 -translate-x-1/2 bg-[#1b3e71] border-x border-b border-slate-700/30 shadow-lg text-white z-[-1] font-sans font-black text-xs uppercase tracking-wide flex items-center justify-center min-w-[170px] h-[28px] select-none pointer-events-none"
+                  style={{ clipPath: 'polygon(0% 0%, 100% 0%, 86% 100%, 14% 100%)' }}
+                >
+                  <span className="pb-1 px-4">{state.classicRoundText}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* IN-SCOREBOARD MODERN GOAL FLASH BANNER */}
             <AnimatePresence>
               {state.activeGoal && (
@@ -1103,64 +1134,64 @@ export default function GraphicsOutput() {
           >
             <div className="bg-slate-950/95 border-2 border-emerald-500 rounded-2xl overflow-hidden shadow-2xl shadow-black/90 w-96">
               {/* Header Banner */}
-              <div className="bg-emerald-600 px-4 py-2 flex justify-between items-center">
-                <span className="text-slate-950 font-black text-xs uppercase tracking-widest font-sans flex items-center gap-1.5">
-                  <ArrowLeftRight className="w-3.5 h-3.5 stroke-[2.5]" /> Substitution
-                </span>
-                <span className="bg-slate-950 text-emerald-400 text-xs font-mono font-black px-1.5 py-0.5 rounded">
-                  {state.activeSubstitution.minute}'
-                </span>
-              </div>
+               <div className="bg-emerald-600 px-4 py-2 flex justify-between items-center">
+                 <span className="text-slate-950 font-black text-xs uppercase tracking-widest font-sans flex items-center gap-1.5">
+                   <ArrowLeftRight className="w-3.5 h-3.5 stroke-[2.5]" /> Substitution
+                 </span>
+                 <span className="bg-slate-950 text-emerald-400 text-xs font-mono font-black px-1.5 py-0.5 rounded">
+                   {state.activeSubstitution.minute}'
+                 </span>
+               </div>
 
-              {/* Substitution Details */}
-              <div className="p-4 flex flex-col gap-3">
-                {/* Team Label */}
-                <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2 mb-1">
-                  {state.activeSubstitution.team === 'home' ? (
-                    state.settings.homeLogo && (
-                      isImageUrl(state.settings.homeLogo) ? (
-                        <img src={state.settings.homeLogo} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="text-base leading-none flex items-center justify-center w-5 h-5">{state.settings.homeLogo}</span>
-                      )
-                    )
-                  ) : (
-                    state.settings.awayLogo && (
-                      isImageUrl(state.settings.awayLogo) ? (
-                        <img src={state.settings.awayLogo} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="text-base leading-none flex items-center justify-center w-5 h-5">{state.settings.awayLogo}</span>
-                      )
-                    )
-                  )}
-                  <span className="text-sm uppercase font-mono tracking-widest text-emerald-400 font-black">
-                    {state.activeSubstitution.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam}
-                  </span>
-                </div>
+               {/* Substitution Details */}
+               <div className="p-4 flex flex-col gap-3">
+                 {/* Team Label */}
+                 <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2 mb-1">
+                   {state.activeSubstitution.team === 'home' ? (
+                     state.settings.homeLogo && (
+                       isImageUrl(state.settings.homeLogo) ? (
+                         <img src={state.settings.homeLogo} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
+                       ) : (
+                         <span className="text-base leading-none flex items-center justify-center w-5 h-5">{state.settings.homeLogo}</span>
+                       )
+                     )
+                   ) : (
+                     state.settings.awayLogo && (
+                       isImageUrl(state.settings.awayLogo) ? (
+                         <img src={state.settings.awayLogo} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
+                       ) : (
+                         <span className="text-base leading-none flex items-center justify-center w-5 h-5">{state.settings.awayLogo}</span>
+                       )
+                     )
+                   )}
+                   <span className="text-sm uppercase font-mono tracking-widest text-emerald-400 font-black">
+                     {state.activeSubstitution.team === 'home' ? state.settings.homeTeam : state.settings.awayTeam}
+                   </span>
+                 </div>
 
-                {/* Player IN (Green Arrow Up) */}
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-400 uppercase tracking-wider font-mono font-bold">PLAYER IN</span>
-                    <span className="text-lg font-black text-emerald-400 mt-0.5">{state.activeSubstitution.playerIn}</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                    <span className="text-lg font-bold">▲</span>
-                  </div>
-                </div>
+                 {/* Player IN (Green Arrow Up) */}
+                 <div className="flex items-center justify-between">
+                   <div className="flex flex-col">
+                     <span className="text-xs text-slate-400 uppercase tracking-wider font-mono font-bold">PLAYER IN</span>
+                     <span className="text-lg font-black text-emerald-400 mt-0.5">{state.activeSubstitution.playerIn}</span>
+                   </div>
+                   <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                     <span className="text-lg font-bold">▲</span>
+                   </div>
+                 </div>
 
-                {/* Player OUT (Red Arrow Down) */}
-                <div className="flex items-center justify-between border-t border-slate-900/60 pt-3">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-400 uppercase tracking-wider font-mono font-bold">PLAYER OUT</span>
-                    <span className="text-lg font-black text-red-400 mt-0.5">{state.activeSubstitution.playerOut}</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center">
-                    <span className="text-lg font-bold">▼</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                 {/* Player OUT (Red Arrow Down) */}
+                 <div className="flex items-center justify-between border-t border-slate-900/60 pt-3">
+                   <div className="flex flex-col">
+                     <span className="text-xs text-slate-400 uppercase tracking-wider font-mono font-bold">PLAYER OUT</span>
+                     <span className="text-lg font-black text-red-400 mt-0.5">{state.activeSubstitution.playerOut}</span>
+                   </div>
+                   <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center">
+                     <span className="text-lg font-bold">▼</span>
+                   </div>
+                 </div>
+               </div>
+             </div>
           </motion.div>
         )}
       </AnimatePresence>
